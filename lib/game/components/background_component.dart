@@ -14,7 +14,12 @@ import 'package:flutter/material.dart';
 class BackgroundComponent extends Component
     with HasGameReference<BananaEscapeGame> {
   /// Seconds for one full noon -> sunset -> night -> dawn loop.
-  static const double _dayCycleSeconds = 72;
+  ///
+  /// Deliberately short. Emulator runs ended around 15-20 seconds, so a longer
+  /// cycle would mean most players never see past midday and night would be
+  /// effectively dead content. At 44s a routine run reaches sunset and a good
+  /// one runs through night into dawn.
+  static const double _dayCycleSeconds = 44;
 
   static const double _horizonFactor = 0.57;
 

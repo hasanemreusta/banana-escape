@@ -6,6 +6,14 @@ class GameConfig {
   static const Size referenceSize = Size(420, 840);
   static const int laneCount = 3;
   static const double playerBottomOffset = 126;
+
+  /// Distance from the bottom edge to the truck's centre.
+  ///
+  /// The blender jar reaches 53px above that centre and the banana hangs 44px
+  /// below its own, so anything tighter than ~70px makes the two silhouettes
+  /// merge into one blob. The art direction is explicit that the hero has to
+  /// stay readable against everything else on screen.
+  static const double truckBottomOffset = 26;
   static const double initialScrollSpeed = 285;
   static const double maxScrollSpeed = 530;
   static const double speedIncrease = 20;

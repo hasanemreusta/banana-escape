@@ -24,7 +24,7 @@ class BlenderTruckComponent extends Component
   void render(Canvas canvas) {
     final center = Offset(
       _x ?? (game.playerChaseX + GameConfig.truckVisualOffsetX),
-      game.size.y - 72 + math.sin(_bob) * 3,
+      game.size.y - GameConfig.truckBottomOffset + math.sin(_bob) * 3,
     );
     canvas.save();
     canvas.translate(center.dx, center.dy);
