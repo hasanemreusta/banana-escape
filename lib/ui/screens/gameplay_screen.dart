@@ -217,18 +217,6 @@ class _GameplayScreenState extends State<GameplayScreen>
                     child: _gameView,
                   ),
                 ),
-                const Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: _TopFade(),
-                ),
-                const Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: _BottomFade(),
-                ),
                 Positioned.fill(
                   child: IgnorePointer(
                     ignoring: true,
@@ -482,52 +470,6 @@ class _HudPill extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _TopFade extends StatelessWidget {
-  const _TopFade();
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        height: 120,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withValues(alpha: 0.22),
-              Colors.white.withValues(alpha: 0.0),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomFade extends StatelessWidget {
-  const _BottomFade();
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        height: 120,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withValues(alpha: 0.0),
-              const Color(0x99FFF7D4),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
       ),
     );
   }

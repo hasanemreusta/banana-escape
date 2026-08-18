@@ -211,7 +211,7 @@ class BackgroundComponent extends Component
         ..shader = LinearGradient(
           colors: [
             _palette.skyBottom.withValues(alpha: 0.0),
-            _palette.skyBottom.withValues(alpha: 0.55),
+            _palette.skyBottom.withValues(alpha: 0.22),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
