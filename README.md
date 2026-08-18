@@ -135,16 +135,6 @@ The Android config tracks the Flutter SDK rather than pinning numbers:
 > the Flutter Gradle plugin enforces. See the comment in
 > [`android/settings.gradle`](android/settings.gradle).
 
-## Docs
-
-| | |
-|---|---|
-| [ROADMAP.md](docs/ROADMAP.md) | Release plan and what is next |
-| [ART_DIRECTION.md](ART_DIRECTION.md) | Visual language, palette, shape rules |
-| [PLAY_CONSOLE_RELEASE_GUIDE.md](docs/PLAY_CONSOLE_RELEASE_GUIDE.md) | Store submission walkthrough |
-| [ASSET_PROMPTS.md](docs/ASSET_PROMPTS.md) | Prompts, if the code-drawn art is ever swapped for sprites |
-| [PRIVACY_POLICY_TEMPLATE.md](docs/PRIVACY_POLICY_TEMPLATE.md) | Starting point for the required policy URL |
-
 ## Status
 
 Shipping on Google Play. The game collects no data, uses no analytics, and has
