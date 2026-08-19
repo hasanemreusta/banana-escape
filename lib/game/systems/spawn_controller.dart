@@ -121,9 +121,13 @@ class SpawnController {
       }
     }
 
+    // Every skip roll can miss, leaving a wave that applies no pressure at
+    // all. The fallback puts one obstacle out so the beat is not wasted — but
+    // never in the open lane, or a board that already has two lanes occupied
+    // would end up sealed off entirely with no way through.
     if (spawned == 0) {
       final fallbackLane = List<int>.generate(3, (index) => index).firstWhere(
-        (lane) => !_laneIsOccupied(lane),
+        (lane) => lane != openLane && !_laneIsOccupied(lane),
         orElse: () => -1,
       );
       if (fallbackLane != -1) {
