@@ -33,7 +33,8 @@ bool shouldCrash({
     return false;
   }
 
-  final horizontalDistance = (playerBox.center.dx - obstacleBox.center.dx).abs();
+  final horizontalDistance =
+      (playerBox.center.dx - obstacleBox.center.dx).abs();
   final requiredDistance = (playerBox.width + obstacleBox.width) * 0.5;
   final isGrazingEdge = horizontalDistance > requiredDistance * 0.54;
   final targetLaneMatchesObstacle =
@@ -50,7 +51,8 @@ bool shouldCrash({
         overlap.height < 30) {
       return false;
     }
-    if (isGrazingEdge && overlap.width < (GameConfig.collisionMinOverlapX + 6)) {
+    if (isGrazingEdge &&
+        overlap.width < (GameConfig.collisionMinOverlapX + 6)) {
       return false;
     }
   }

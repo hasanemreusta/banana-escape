@@ -99,7 +99,8 @@ void main() {
       // shallow enough for the escape rule to reach.
       final obstacle = boxOffsetBy(player, dx: 12);
       final overlap = player.intersect(obstacle);
-      expect(overlap.width, greaterThanOrEqualTo(GameConfig.collisionMinOverlapX));
+      expect(
+          overlap.width, greaterThanOrEqualTo(GameConfig.collisionMinOverlapX));
       expect(overlap.width, lessThan(GameConfig.laneEscapeGraceOverlapX));
 
       // Swiping, but into it — or not swiping away from it — is a crash.
