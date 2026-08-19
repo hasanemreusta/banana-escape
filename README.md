@@ -15,6 +15,28 @@ You are a banana. A blender truck wants you. Swipe or die trying.
 
 ---
 
+## Screenshots
+
+| Main menu | Gameplay | Run summary |
+|---|---|---|
+| <img src="assets/screenshots/menu.png" width="240" alt="Main menu"> | <img src="assets/screenshots/gameplay-day.png" width="240" alt="Gameplay at noon"> | <img src="assets/screenshots/game-over.png" width="240" alt="Run summary"> |
+
+The same run at three points of the day/night cycle — sky, ground, ridges, palms
+and road all shift palette together, and stars fade in as it darkens:
+
+| Noon | Sunset | Night |
+|---|---|---|
+| <img src="assets/screenshots/gameplay-day.png" width="240" alt="Noon palette"> | <img src="assets/screenshots/gameplay-sunset.png" width="240" alt="Sunset palette"> | <img src="assets/screenshots/gameplay-night.png" width="240" alt="Night palette"> |
+
+<img src="assets/screenshots/meta.png" width="240" alt="Daily reward, skins and missions" align="right">
+
+The meta layer: a seven-day login streak with an escalating reward table, four
+skins priced in coins, and three missions that persist across runs. Every banana
+in the closet is the same code-drawn character with a different palette — adding
+a skin is a colour table entry, not an art export.
+
+<br clear="all">
+
 ## What it is
 
 A hypercasual mobile runner with a deliberate constraint: **every visual is drawn
