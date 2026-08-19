@@ -1,14 +1,16 @@
 import 'dart:math';
 
 import 'package:banana_escape/config/game_config.dart';
-import 'package:banana_escape/game/banana_escape_game.dart';
 import 'package:banana_escape/game/data/collectible_type.dart';
 import 'package:banana_escape/game/data/obstacle_type.dart';
+import 'package:banana_escape/game/systems/spawn_host.dart';
 
 class SpawnController {
-  SpawnController(this.game) : _random = Random();
+  /// [random] exists so tests can pin the rolls. Production passes nothing and
+  /// gets an unseeded generator, exactly as before.
+  SpawnController(this.host, {Random? random}) : _random = random ?? Random();
 
-  final BananaEscapeGame game;
+  final SpawnHost host;
   final Random _random;
 
   double _obstacleTimer = 0;
@@ -27,13 +29,13 @@ class SpawnController {
 
   void update(double dt) {
     while (_openingIndex < _openingSpawns.length &&
-        game.runTime >= _openingSpawns[_openingIndex].time) {
+        host.runTime >= _openingSpawns[_openingIndex].time) {
       final opening = _openingSpawns[_openingIndex];
       if (opening.obstacle != null) {
-        game.spawnObstacle(opening.lane, opening.obstacle!);
+        host.spawnObstacle(opening.lane, opening.obstacle!);
       }
       if (opening.collectible != null) {
-        game.spawnCollectible(opening.lane, opening.collectible!);
+        host.spawnCollectible(opening.lane, opening.collectible!, yOffset: 0);
       }
       _openingIndex++;
     }
@@ -41,12 +43,12 @@ class SpawnController {
     _obstacleTimer += dt;
     _collectibleTimer += dt;
 
-    if (_obstacleTimer >= game.obstacleInterval) {
+    if (_obstacleTimer >= host.obstacleInterval) {
       _obstacleTimer = 0;
       _spawnObstacleWave();
     }
 
-    if (_collectibleTimer >= game.collectibleInterval) {
+    if (_collectibleTimer >= host.collectibleInterval) {
       _collectibleTimer = 0;
       _spawnCollectibleWave();
     }
@@ -54,11 +56,7 @@ class SpawnController {
 
   void _spawnObstacleWave() {
     final safeLanes = List<int>.generate(3, (index) => index)
-        .where(
-          (lane) =>
-              !game.laneHasObstacleNearSpawn(lane) &&
-              !game.laneHasCollectibleNearSpawn(lane),
-        )
+        .where((lane) => !_laneIsOccupied(lane))
         .toList();
     if (safeLanes.isEmpty) {
       return;
@@ -70,10 +68,10 @@ class SpawnController {
         openLaneCandidates.isNotEmpty ? openLaneCandidates : safeLanes;
     final openLane = openLaneSource[_random.nextInt(openLaneSource.length)];
     _lastOpenLane = openLane;
-    final difficultyBias = (game.stage - 1).clamp(0, 6) / 6;
-    final inEarlyGame = game.runTime < GameConfig.earlyGameSafeDuration;
-    final inMidGame = game.runTime >= GameConfig.midGamePressureStart;
-    final inLateGame = game.runTime >= GameConfig.lateGamePressureStart;
+    final difficultyBias = (host.stage - 1).clamp(0, 6) / 6;
+    final inEarlyGame = host.runTime < GameConfig.earlyGameSafeDuration;
+    final inMidGame = host.runTime >= GameConfig.midGamePressureStart;
+    final inLateGame = host.runTime >= GameConfig.lateGamePressureStart;
 
     final double blockChance;
     if (inEarlyGame) {
@@ -93,8 +91,7 @@ class SpawnController {
       if (lane == openLane) {
         continue;
       }
-      if (game.laneHasObstacleNearSpawn(lane) ||
-          game.laneHasCollectibleNearSpawn(lane)) {
+      if (_laneIsOccupied(lane)) {
         continue;
       }
       if (!blockTwoLanes &&
@@ -102,7 +99,7 @@ class SpawnController {
               _singleLaneSkipChance(difficultyBias, inEarlyGame, inMidGame)) {
         continue;
       }
-      game.spawnObstacle(lane, _pickObstacleType(game.stage));
+      host.spawnObstacle(lane, _pickObstacleType(host.stage));
       spawned++;
       blockedLanes.add(lane);
       if (!blockTwoLanes) {
@@ -110,15 +107,15 @@ class SpawnController {
       }
     }
 
-    if (game.stage >= 3 &&
+    if (host.stage >= 3 &&
         blockedLanes.isNotEmpty &&
         _random.nextDouble() <
             _staggerChance(difficultyBias, inMidGame, inLateGame)) {
       final staggerLane = blockedLanes[_random.nextInt(blockedLanes.length)];
-      if (!game.laneHasObstacleNearSpawn(staggerLane, topLimit: 110)) {
-        game.spawnObstacleWithOffset(
+      if (!host.laneHasObstacleNearSpawn(staggerLane, topLimit: 110)) {
+        host.spawnObstacleWithOffset(
           staggerLane,
-          _pickObstacleType(game.stage),
+          _pickObstacleType(host.stage),
           yOffset: _staggerOffset(inLateGame),
         );
       }
@@ -126,18 +123,29 @@ class SpawnController {
 
     if (spawned == 0) {
       final fallbackLane = List<int>.generate(3, (index) => index).firstWhere(
-        (lane) =>
-            !game.laneHasObstacleNearSpawn(lane) &&
-            !game.laneHasCollectibleNearSpawn(lane),
+        (lane) => !_laneIsOccupied(lane),
         orElse: () => -1,
       );
       if (fallbackLane != -1) {
-        game.spawnObstacle(
+        host.spawnObstacle(
           fallbackLane,
-          _pickObstacleType(game.stage),
+          _pickObstacleType(host.stage),
         );
       }
     }
+  }
+
+  /// A lane is off limits for a fresh obstacle while anything is still sitting
+  /// in the spawn strip — dropping a second one on top reads as a cheap kill.
+  bool _laneIsOccupied(int lane) {
+    return host.laneHasObstacleNearSpawn(
+          lane,
+          topLimit: GameConfig.spawnSafetyTop,
+        ) ||
+        host.laneHasCollectibleNearSpawn(
+          lane,
+          topLimit: GameConfig.spawnSafetyTop,
+        );
   }
 
   double _singleLaneSkipChance(
@@ -194,7 +202,12 @@ class SpawnController {
 
   void _spawnCollectibleWave() {
     final availableLanes = List<int>.generate(3, (index) => index)
-        .where((lane) => !game.laneHasObstacleNearSpawn(lane))
+        .where(
+          (lane) => !host.laneHasObstacleNearSpawn(
+            lane,
+            topLimit: GameConfig.spawnSafetyTop,
+          ),
+        )
         .toList();
     if (availableLanes.isEmpty) {
       return;
@@ -202,21 +215,21 @@ class SpawnController {
     final lane = availableLanes[_random.nextInt(availableLanes.length)];
     final roll = _random.nextDouble();
 
-    if (game.laneHasCollectibleNearSpawn(lane, topLimit: 150)) {
+    if (host.laneHasCollectibleNearSpawn(lane, topLimit: 150)) {
       return;
     }
 
-    if (roll < 0.12 && game.runTime > 8 && !game.magnetActive) {
-      game.spawnCollectible(lane, CollectibleType.magnet);
+    if (roll < 0.12 && host.runTime > 8 && !host.magnetActive) {
+      host.spawnCollectible(lane, CollectibleType.magnet, yOffset: 0);
       return;
     }
 
-    if (roll > 0.88 && game.runTime > 6) {
-      game.spawnCollectible(lane, CollectibleType.combo);
+    if (roll > 0.88 && host.runTime > 6) {
+      host.spawnCollectible(lane, CollectibleType.combo, yOffset: 0);
       return;
     }
 
-    if (game.stage >= 2 &&
+    if (host.stage >= 2 &&
         _random.nextDouble() < 0.24 &&
         availableLanes.length >= 2) {
       _spawnCoinZigZag(availableLanes);
@@ -228,9 +241,9 @@ class SpawnController {
       return;
     }
 
-    final count = 1 + _random.nextInt(game.stage >= 3 ? 4 : 3);
+    final count = 1 + _random.nextInt(host.stage >= 3 ? 4 : 3);
     for (var i = 0; i < count; i++) {
-      game.spawnCollectible(
+      host.spawnCollectible(
         lane,
         CollectibleType.coin,
         yOffset: -(i * GameConfig.collectibleVerticalGap).toDouble(),
@@ -239,9 +252,9 @@ class SpawnController {
   }
 
   void _spawnCoinLine(int lane) {
-    final count = 3 + _random.nextInt(game.stage >= 3 ? 3 : 2);
+    final count = 3 + _random.nextInt(host.stage >= 3 ? 3 : 2);
     for (var i = 0; i < count; i++) {
-      game.spawnCollectible(
+      host.spawnCollectible(
         lane,
         CollectibleType.coin,
         yOffset: -(i * GameConfig.collectibleVerticalGap).toDouble(),
@@ -254,7 +267,7 @@ class SpawnController {
     var currentLane = availableLanes[_random.nextInt(availableLanes.length)];
     final steps = 4 + _random.nextInt(2);
     for (var i = 0; i < steps; i++) {
-      game.spawnCollectible(
+      host.spawnCollectible(
         currentLane,
         CollectibleType.coin,
         yOffset: -(i * GameConfig.collectibleVerticalGap).toDouble(),

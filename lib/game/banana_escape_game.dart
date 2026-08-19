@@ -13,13 +13,15 @@ import 'package:banana_escape/game/components/obstacle_component.dart';
 import 'package:banana_escape/game/components/player_component.dart';
 import 'package:banana_escape/game/data/collectible_type.dart';
 import 'package:banana_escape/game/data/obstacle_type.dart';
+import 'package:banana_escape/game/systems/collision_rules.dart';
 import 'package:banana_escape/game/systems/spawn_controller.dart';
+import 'package:banana_escape/game/systems/spawn_host.dart';
 import 'package:banana_escape/models/skin.dart';
 import 'package:banana_escape/services/audio_service.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
-class BananaEscapeGame extends FlameGame {
+class BananaEscapeGame extends FlameGame implements SpawnHost {
   BananaEscapeGame({
     required AudioService audio,
     required BananaSkin skin,
@@ -40,10 +42,13 @@ class BananaEscapeGame extends FlameGame {
   final List<double> _laneCenters = List<double>.filled(3, 0);
 
   double scrollSpeed = GameConfig.initialScrollSpeed;
+  @override
   double runTime = 0;
   double _difficultyElapsed = 0;
   double _stageElapsed = 0;
+  @override
   double obstacleInterval = GameConfig.initialObstacleInterval;
+  @override
   double collectibleInterval = GameConfig.initialCollectibleInterval;
   double _magnetRemaining = 0;
   double _comboRemaining = 0;
@@ -55,6 +60,7 @@ class BananaEscapeGame extends FlameGame {
   int score = 0;
   int distance = 0;
   int coins = 0;
+  @override
   int stage = 1;
   int styleBonus = 0;
   double _roadWidthFactor = 0.62;
@@ -77,6 +83,7 @@ class BananaEscapeGame extends FlameGame {
 
   List<double> get laneCenters => _laneCenters;
 
+  @override
   bool get magnetActive => _magnetRemaining > 0;
   double get magnetRemaining => _magnetRemaining;
   double get comboRemaining => _comboRemaining;
@@ -220,10 +227,12 @@ class BananaEscapeGame extends FlameGame {
 
   void moveRight() => _player?.moveBy(1);
 
+  @override
   void spawnObstacle(int lane, ObstacleType type) {
     spawnObstacleWithOffset(lane, type, yOffset: 0);
   }
 
+  @override
   void spawnObstacleWithOffset(
     int lane,
     ObstacleType type, {
@@ -243,6 +252,7 @@ class BananaEscapeGame extends FlameGame {
     add(obstacle);
   }
 
+  @override
   void spawnCollectible(int lane, CollectibleType type, {double yOffset = 0}) {
     if (size.x <= 0 || size.y <= 0) {
       return;
@@ -258,6 +268,7 @@ class BananaEscapeGame extends FlameGame {
     add(collectible);
   }
 
+  @override
   bool laneHasObstacleNearSpawn(int lane,
       {double topLimit = GameConfig.spawnSafetyTop}) {
     return _obstacles.any(
@@ -265,6 +276,7 @@ class BananaEscapeGame extends FlameGame {
     );
   }
 
+  @override
   bool laneHasCollectibleNearSpawn(
     int lane, {
     double topLimit = GameConfig.spawnSafetyTop,
@@ -341,48 +353,14 @@ class BananaEscapeGame extends FlameGame {
     Rect playerBox,
     Rect obstacleBox,
   ) {
-    if (!playerBox.overlaps(obstacleBox)) {
-      return false;
-    }
-
-    final overlap = playerBox.intersect(obstacleBox);
-    if (overlap.width <= 0 || overlap.height <= 0) {
-      return false;
-    }
-
-    final horizontalDistance =
-        (playerBox.center.dx - obstacleBox.center.dx).abs();
-    final requiredDistance = (playerBox.width + obstacleBox.width) * 0.5;
-    final isGrazingEdge = horizontalDistance > requiredDistance * 0.54;
-    final escaping = player.isEscapingFrom(obstacleBox.center.dx);
     final safeTargetLane = player.targetLane.clamp(0, laneCenters.length - 1);
-    final targetLaneCenter = laneCenters[safeTargetLane];
-    final targetLaneMatchesObstacle =
-        obstacleBox.center.dx >= targetLaneCenter - 28 &&
-            obstacleBox.center.dx <= targetLaneCenter + 28;
-
-    if (player.isChangingLane) {
-      if (escaping &&
-          !targetLaneMatchesObstacle &&
-          overlap.width < GameConfig.laneEscapeGraceOverlapX) {
-        return false;
-      }
-      if (overlap.width < GameConfig.laneChangeGraceOverlapX &&
-          overlap.height < 30) {
-        return false;
-      }
-      if (isGrazingEdge &&
-          overlap.width < (GameConfig.collisionMinOverlapX + 6)) {
-        return false;
-      }
-    }
-
-    if (overlap.width < GameConfig.collisionMinOverlapX &&
-        overlap.height < GameConfig.collisionMinOverlapY) {
-      return false;
-    }
-
-    return true;
+    return shouldCrash(
+      playerBox: playerBox,
+      obstacleBox: obstacleBox,
+      isChangingLane: player.isChangingLane,
+      isEscaping: player.isEscapingFrom(obstacleBox.center.dx),
+      targetLaneCenter: laneCenters[safeTargetLane],
+    );
   }
 
   void _collect(CollectibleComponent collectible) {
