@@ -7,6 +7,7 @@
 **A three-lane endless runner built with Flutter and Flame.**
 You are a banana. A blender truck wants you. Swipe or die trying.
 
+[![CI](https://github.com/hasanemreusta/banana-escape/actions/workflows/ci.yml/badge.svg)](https://github.com/hasanemreusta/banana-escape/actions/workflows/ci.yml)
 [![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Flame](https://img.shields.io/badge/Flame-1.38-FF6B35)](https://flame-engine.org)
 [![Android](https://img.shields.io/badge/Android-API%2024–36-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
@@ -67,8 +68,7 @@ The scene runs four parallax layers at different scroll rates to fake depth:
 ridge lines barely drift, palms slide past at a middling pace, roadside bushes
 and marker posts rush by, and the road itself moves fastest. On top of that a
 continuous day/night cycle interpolates between four palettes — noon, sunset,
-night, dawn — over roughly 72 seconds, so a long run visibly travels through
-time. Stars fade in as the sky darkens. Speed lines only appear past a
+night, dawn — over 44 seconds, so a long run visibly travels through time. Stars fade in as the sky darkens. Speed lines only appear past a
 threshold, so they read as a reward for surviving rather than constant noise.
 
 The banana runs a real gait cycle: legs alternate in opposite phase, arms
