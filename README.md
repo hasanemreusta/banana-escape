@@ -159,9 +159,24 @@ The Android config tracks the Flutter SDK rather than pinning numbers:
 
 ## Status
 
-Shipping on Google Play. The game collects no data, uses no analytics, and has
-no network calls — `AdService` exists as an abstraction with a mock
-implementation, deliberately unwired.
+In closed testing on Google Play; production rollout follows once the test track
+completes. The release build is signed, targets API 36, and the store listing
+assets are in `assets/branding/`.
+
+The game collects no data, uses no analytics, and has no network calls —
+`AdService` exists as an abstraction with a mock implementation, deliberately
+unwired.
+
+### Want to test it?
+
+The closed testing track is open and taking testers. Google Play requires each
+tester to be added by the Google account email tied to their device, so send
+that address to **hasanemreusta5@gmail.com** and you will get the opt-in link
+back.
+
+Testing is free, the build is the same one headed for production, and feedback
+on feel — collision fairness, difficulty ramp, whether the day/night cycle reads
+— is the most useful thing you can send back.
 
 ## License
 
