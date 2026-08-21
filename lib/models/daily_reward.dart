@@ -65,9 +65,13 @@ class DailyRewardState {
   }
 
   factory DailyRewardState.fromMap(Map<String, Object?> map) {
+    // Clamped because [pendingDay] indexes [rewardTable] with it: a stored day
+    // outside the table would turn a corrupt preferences value into a crash on
+    // the menu screen.
+    final storedDay = (map['streakDay'] as num?)?.toInt() ?? 1;
     return DailyRewardState(
-      streakDay: (map['streakDay'] as int?) ?? 1,
-      lastClaimedAtEpochMs: map['lastClaimedAtEpochMs'] as int?,
+      streakDay: storedDay.clamp(1, streakLength),
+      lastClaimedAtEpochMs: (map['lastClaimedAtEpochMs'] as num?)?.toInt(),
     );
   }
 }

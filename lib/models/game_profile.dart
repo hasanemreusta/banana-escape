@@ -150,23 +150,36 @@ class GameProfile {
   factory GameProfile.fromPrefs(Map<String, Object?> map) {
     final initial = GameProfile.initial();
 
+    // Both blobs are JSON inside a preferences string, so a half-written or
+    // hand-edited value is possible. This runs during startup, before any
+    // screen exists to report an error, so a throw here would leave the app
+    // unable to launch at all — losing the stored progress is the better of
+    // the two outcomes.
     Map<String, int> decodeMissionProgress(Object? raw) {
       if (raw is! String || raw.isEmpty) {
         return Map<String, int>.from(initial.missionProgress);
       }
-      final decoded = jsonDecode(raw) as Map<String, dynamic>;
-      return {
-        for (final mission in Missions.all)
-          mission.id: (decoded[mission.id] as num?)?.toInt() ?? 0,
-      };
+      try {
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
+        return {
+          for (final mission in Missions.all)
+            mission.id: (decoded[mission.id] as num?)?.toInt() ?? 0,
+        };
+      } on Object {
+        return Map<String, int>.from(initial.missionProgress);
+      }
     }
 
     DailyRewardState decodeDailyReward(Object? raw) {
       if (raw is! String || raw.isEmpty) {
         return initial.dailyRewardState;
       }
-      final decoded = jsonDecode(raw) as Map<String, dynamic>;
-      return DailyRewardState.fromMap(decoded);
+      try {
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
+        return DailyRewardState.fromMap(decoded);
+      } on Object {
+        return initial.dailyRewardState;
+      }
     }
 
     return GameProfile(
