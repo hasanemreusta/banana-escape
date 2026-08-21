@@ -46,11 +46,22 @@ android {
 
     buildTypes {
         release {
-            if (!keystorePropertiesFile.exists()) {
-                throw new GradleException("Missing android/key.properties. Create a real upload keystore before building a Play Store release.")
-            }
             signingConfig = signingConfigs.release
         }
+    }
+}
+
+// The keystore check used to live inline above, inside `buildTypes { release
+// { ... } }`. That closure configures eagerly during Gradle's configuration
+// phase for every invocation, not only when a release variant is actually
+// built — so `flutter build apk --debug` (and CI, and anyone cloning the repo
+// without the private keystore) failed before a single task ran. Deferred to
+// task-graph time so only actually assembling or bundling the release variant
+// demands a real keystore.
+gradle.taskGraph.whenReady { graph ->
+    def buildsRelease = graph.allTasks.any { it.name.endsWith("Release") }
+    if (buildsRelease && !keystorePropertiesFile.exists()) {
+        throw new GradleException("Missing android/key.properties. Create a real upload keystore before building a Play Store release.")
     }
 }
 
