@@ -14,6 +14,8 @@ class StorageService {
   static const String _keyOwnedSkinIds = 'ownedSkinIds';
   static const String _keyEquippedSkinId = 'equippedSkinId';
   static const String _keyDailyReward = 'dailyReward';
+  static const String _keyUpgradeLevels = 'upgradeLevels';
+  static const String _keyShieldCount = 'shieldCount';
 
   Future<GameProfile> loadProfile() async {
     return GameProfile.fromPrefs({
@@ -25,6 +27,8 @@ class StorageService {
       'ownedSkinIds': _preferences.getStringList(_keyOwnedSkinIds),
       'equippedSkinId': _preferences.getString(_keyEquippedSkinId),
       'dailyReward': _preferences.getString(_keyDailyReward),
+      'upgradeLevels': _preferences.getString(_keyUpgradeLevels),
+      'shieldCount': _preferences.getInt(_keyShieldCount),
     });
   }
 
@@ -49,6 +53,14 @@ class StorageService {
     await _preferences.setString(
       _keyDailyReward,
       prefsMap['dailyReward']! as String,
+    );
+    await _preferences.setString(
+      _keyUpgradeLevels,
+      prefsMap['upgradeLevels']! as String,
+    );
+    await _preferences.setInt(
+      _keyShieldCount,
+      prefsMap['shieldCount']! as int,
     );
   }
 }

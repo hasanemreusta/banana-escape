@@ -21,6 +21,9 @@ class PlayerComponent extends PositionComponent {
   double _targetX = 0;
   double _lean = 0;
   bool _magnetActive = false;
+  bool _shieldReady = false;
+  double _invulnerableRemaining = 0;
+  double _shieldPulse = 0;
   double magnetPulse = 0;
   double _trailPulse = 0;
   int _targetLane = 1;
@@ -98,6 +101,16 @@ class PlayerComponent extends PositionComponent {
 
   void setMagnetActive(bool value) {
     _magnetActive = value;
+  }
+
+  void setShieldReady(bool value) {
+    _shieldReady = value;
+  }
+
+  /// Seconds left in the post-hit grace period; the banana blinks while it
+  /// runs so the player can see why the next obstacle did not end the run.
+  void setInvulnerableRemaining(double seconds) {
+    _invulnerableRemaining = seconds;
   }
 
   /// [factor] is the current run speed normalised to 0..1.
@@ -181,6 +194,7 @@ class PlayerComponent extends PositionComponent {
     // Stride quickens with speed; the banana never fully stops running.
     _runPhase += dt * (11 + (_speedFactor * 9));
     magnetPulse += dt * 4;
+    _shieldPulse += dt * 3;
     _trailPulse += dt * 7;
   }
 
@@ -192,6 +206,10 @@ class PlayerComponent extends PositionComponent {
     // Two bounces per stride: the body rises on each footfall, not each cycle.
     final bob = -(math.sin(_runPhase * 2).abs()) * 2.4;
     final activeMood = mood;
+    if (_invulnerableRemaining > 0 &&
+        (_invulnerableRemaining * 10).floor().isOdd) {
+      return;
+    }
 
     canvas.save();
     canvas.translate(size.x / 2, size.y / 2);
@@ -205,6 +223,9 @@ class PlayerComponent extends PositionComponent {
 
     if (_magnetActive) {
       _drawMagnetAura(canvas);
+    }
+    if (_shieldReady) {
+      _drawShieldBubble(canvas);
     }
 
     _drawGroundShadow(canvas);
@@ -220,6 +241,24 @@ class PlayerComponent extends PositionComponent {
     _drawFace(canvas, activeMood);
 
     canvas.restore();
+  }
+
+  void _drawShieldBubble(Canvas canvas) {
+    final radius = 40 + math.sin(_shieldPulse) * 1.5;
+    const center = Offset(0, 2);
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()..color = AppColors.mint.withValues(alpha: 0.12),
+    );
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = AppColors.mint.withValues(alpha: 0.7)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.4,
+    );
   }
 
   void _drawMagnetAura(Canvas canvas) {

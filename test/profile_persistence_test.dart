@@ -5,6 +5,7 @@ import 'package:banana_escape/models/daily_reward.dart';
 import 'package:banana_escape/models/game_profile.dart';
 import 'package:banana_escape/models/mission.dart';
 import 'package:banana_escape/models/skin.dart';
+import 'package:banana_escape/models/upgrade.dart';
 import 'package:banana_escape/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,7 +23,7 @@ GameProfile populatedProfile() {
         ),
       )
       .copyWith(
-        totalCoins: 1500,
+        totalCoins: BananaSkins.berryPop.cost + 1500,
         soundOn: false,
         dailyRewardState: DailyRewardState(
           streakDay: 4,
@@ -30,7 +31,15 @@ GameProfile populatedProfile() {
               DateTime(2026, 8, 18, 20, 30).millisecondsSinceEpoch,
         ),
       )
-      .unlockSkin(BananaSkins.berryPop);
+      .unlockSkin(BananaSkins.berryPop)
+      .copyWith(
+        upgradeLevels: {
+          Upgrades.magnet.id: 2,
+          Upgrades.comboWindow.id: 5,
+          Upgrades.comboBanana.id: 1,
+        },
+        shieldCount: 3,
+      );
 }
 
 Future<StorageService> storageWith(Map<String, Object> values) async {
@@ -54,6 +63,8 @@ void expectSameProfile(GameProfile actual, GameProfile expected) {
     actual.dailyRewardState.lastClaimedAtEpochMs,
     expected.dailyRewardState.lastClaimedAtEpochMs,
   );
+  expect(actual.upgradeLevels, expected.upgradeLevels);
+  expect(actual.shieldCount, expected.shieldCount);
 }
 
 void main() {
@@ -197,11 +208,12 @@ void main() {
 
   group('skins', () {
     test('buying a skin spends the coins, owns it and equips it', () {
-      final profile = GameProfile.initial().copyWith(totalCoins: 600);
+      final bank = BananaSkins.berryPop.cost + 100;
+      final profile = GameProfile.initial().copyWith(totalCoins: bank);
 
       final after = profile.unlockSkin(BananaSkins.berryPop);
 
-      expect(after.totalCoins, 600 - BananaSkins.berryPop.cost);
+      expect(after.totalCoins, bank - BananaSkins.berryPop.cost);
       expect(after.ownsSkin(BananaSkins.berryPop.id), isTrue);
       expect(after.equippedSkinId, BananaSkins.berryPop.id);
     });

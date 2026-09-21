@@ -17,6 +17,7 @@ import 'package:banana_escape/game/systems/collision_rules.dart';
 import 'package:banana_escape/game/systems/spawn_controller.dart';
 import 'package:banana_escape/game/systems/spawn_host.dart';
 import 'package:banana_escape/models/skin.dart';
+import 'package:banana_escape/models/upgrade.dart';
 import 'package:banana_escape/services/audio_service.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -26,13 +27,22 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
     required AudioService audio,
     required BananaSkin skin,
     required ValueChanged<GameSessionResult> onGameOver,
+    this.loadout = RunLoadout.base,
+    VoidCallback? onShieldUsed,
   })  : _audio = audio,
         _skin = skin,
-        _onGameOver = onGameOver;
+        _onGameOver = onGameOver,
+        _onShieldUsed = onShieldUsed,
+        _shieldReady = loadout.hasShield;
 
   final AudioService _audio;
   final BananaSkin _skin;
+
+  /// Called whenever the run stops on a crash. The run can still be carried
+  /// on with [revive], so this is not necessarily the final result.
   final ValueChanged<GameSessionResult> _onGameOver;
+  final VoidCallback? _onShieldUsed;
+  final RunLoadout loadout;
 
   PlayerComponent? _player;
   SpawnController? _spawner;
@@ -56,6 +66,14 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
   double _statusRemaining = 0;
   String? _statusText;
   bool _ended = false;
+  bool _shieldReady;
+  double _invulnerableRemaining = 0;
+  int revivesUsed = 0;
+
+  /// Grace period after a shield breaks or a revive, long enough to clear the
+  /// obstacle that caused it.
+  static const double shieldGraceDuration = 1.2;
+  static const double reviveGraceDuration = 2.0;
 
   int score = 0;
   int distance = 0;
@@ -85,6 +103,8 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
 
   @override
   bool get magnetActive => _magnetRemaining > 0;
+  bool get shieldReady => _shieldReady;
+  bool get isInvulnerable => _invulnerableRemaining > 0;
   double get magnetRemaining => _magnetRemaining;
   double get comboRemaining => _comboRemaining;
 
@@ -110,6 +130,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
         statusText: statusText,
         comboMultiplier: comboMultiplier,
         comboRemaining: comboRemaining,
+        shieldReady: shieldReady,
       );
 
   @override
@@ -156,6 +177,9 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
     if (_magnetRemaining > 0) {
       _magnetRemaining = math.max(0, _magnetRemaining - dt);
     }
+    if (_invulnerableRemaining > 0) {
+      _invulnerableRemaining = math.max(0, _invulnerableRemaining - dt);
+    }
     if (_comboRemaining > 0) {
       _comboRemaining = math.max(0, _comboRemaining - dt);
       if (_comboRemaining == 0) {
@@ -163,6 +187,8 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
       }
     }
     _player?.setMagnetActive(magnetActive);
+    _player?.setShieldReady(_shieldReady);
+    _player?.setInvulnerableRemaining(_invulnerableRemaining);
     _player?.setSpeedFactor(
       (scrollSpeed - GameConfig.initialScrollSpeed) /
           (GameConfig.maxScrollSpeed - GameConfig.initialScrollSpeed),
@@ -304,8 +330,15 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
     final playerBox = player.hitbox;
 
     for (final obstacle in List<ObstacleComponent>.from(_obstacles)) {
+      if (isInvulnerable) {
+        break;
+      }
       final obstacleBox = obstacle.hitbox;
       if (_shouldCrash(player, playerBox, obstacleBox)) {
+        if (_shieldReady) {
+          _breakShield(obstacle);
+          break;
+        }
         _finishRun();
         return;
       }
@@ -368,7 +401,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
     // multiplier alive while a scrappy run lets it lapse.
     final previousMultiplier = comboMultiplier;
     _comboPickups += 1;
-    _comboRemaining = GameConfig.comboWindow;
+    _comboRemaining = loadout.comboWindow;
     final multiplier = comboMultiplier;
     if (multiplier > previousMultiplier) {
       _statusText = 'Combo x$multiplier!';
@@ -400,7 +433,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
         }
       case CollectibleType.combo:
         {
-          coins += GameConfig.comboCoinValue.toInt() * multiplier;
+          coins += loadout.comboCoinValue.toInt() * multiplier;
           _statusText = 'Combo Banana!';
           _statusRemaining = 1.4;
           add(
@@ -416,7 +449,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
         }
       case CollectibleType.magnet:
         {
-          _magnetRemaining = GameConfig.magnetDuration;
+          _magnetRemaining = loadout.magnetDuration;
           _statusText = 'Magnet mode!';
           _statusRemaining = 1.4;
           add(
@@ -493,6 +526,42 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
     final dx = a.x - b.x;
     final dy = a.y - b.y;
     return math.sqrt(dx * dx + dy * dy);
+  }
+
+  void _breakShield(ObstacleComponent obstacle) {
+    _shieldReady = false;
+    _invulnerableRemaining = shieldGraceDuration;
+    _statusText = 'Shield saved you!';
+    _statusRemaining = 1.4;
+    add(
+      FeedbackBurstComponent(
+        position: obstacle.position.clone(),
+        color: AppColors.mint,
+        baseRadius: 44,
+        particles: 12,
+        ring: true,
+      ),
+    );
+    _removeObstacle(obstacle);
+    _audio.playNearMiss();
+    _onShieldUsed?.call();
+  }
+
+  /// Carries a crashed run on: clears the road, grants a short grace period
+  /// and resumes the engine. Does nothing unless the run is stopped.
+  void revive() {
+    if (!_ended) {
+      return;
+    }
+    for (final obstacle in List<ObstacleComponent>.from(_obstacles)) {
+      _removeObstacle(obstacle);
+    }
+    revivesUsed += 1;
+    _ended = false;
+    _invulnerableRemaining = reviveGraceDuration;
+    _statusText = 'Back in the race!';
+    _statusRemaining = 1.4;
+    resumeEngine();
   }
 
   Future<void> _finishRun() async {

@@ -4,6 +4,7 @@ import 'package:banana_escape/core/game_session_result.dart';
 import 'package:banana_escape/models/daily_reward.dart';
 import 'package:banana_escape/models/mission.dart';
 import 'package:banana_escape/models/skin.dart';
+import 'package:banana_escape/models/upgrade.dart';
 
 class GameProfile {
   const GameProfile({
@@ -15,6 +16,8 @@ class GameProfile {
     required this.ownedSkinIds,
     required this.equippedSkinId,
     required this.dailyRewardState,
+    required this.upgradeLevels,
+    required this.shieldCount,
   });
 
   final int highScore;
@@ -25,6 +28,10 @@ class GameProfile {
   final List<String> ownedSkinIds;
   final String equippedSkinId;
   final DailyRewardState dailyRewardState;
+
+  /// Level per [UpgradeDefinition.id]; a missing key means level 0.
+  final Map<String, int> upgradeLevels;
+  final int shieldCount;
 
   factory GameProfile.initial() {
     return GameProfile(
@@ -38,6 +45,10 @@ class GameProfile {
       ownedSkinIds: const [BananaSkins.defaultId],
       equippedSkinId: BananaSkins.defaultId,
       dailyRewardState: const DailyRewardState(streakDay: 1),
+      upgradeLevels: {
+        for (final upgrade in Upgrades.all) upgrade.id: 0,
+      },
+      shieldCount: 0,
     );
   }
 
@@ -50,6 +61,8 @@ class GameProfile {
     List<String>? ownedSkinIds,
     String? equippedSkinId,
     DailyRewardState? dailyRewardState,
+    Map<String, int>? upgradeLevels,
+    int? shieldCount,
   }) {
     return GameProfile(
       highScore: highScore ?? this.highScore,
@@ -60,6 +73,8 @@ class GameProfile {
       ownedSkinIds: ownedSkinIds ?? this.ownedSkinIds,
       equippedSkinId: equippedSkinId ?? this.equippedSkinId,
       dailyRewardState: dailyRewardState ?? this.dailyRewardState,
+      upgradeLevels: upgradeLevels ?? this.upgradeLevels,
+      shieldCount: shieldCount ?? this.shieldCount,
     );
   }
 
@@ -134,6 +149,68 @@ class GameProfile {
     return copyWith(equippedSkinId: skinId);
   }
 
+  int upgradeLevel(UpgradeDefinition upgrade) {
+    return (upgradeLevels[upgrade.id] ?? 0)
+        .clamp(0, UpgradeDefinition.maxLevel);
+  }
+
+  bool canBuyUpgrade(UpgradeDefinition upgrade) {
+    final cost = upgrade.costToUpgradeFrom(upgradeLevel(upgrade));
+    return cost != null && totalCoins >= cost;
+  }
+
+  GameProfile buyUpgrade(UpgradeDefinition upgrade) {
+    final level = upgradeLevel(upgrade);
+    final cost = upgrade.costToUpgradeFrom(level);
+    if (cost == null || totalCoins < cost) {
+      return this;
+    }
+    return copyWith(
+      totalCoins: totalCoins - cost,
+      upgradeLevels: {...upgradeLevels, upgrade.id: level + 1},
+    );
+  }
+
+  bool get canBuyShield =>
+      shieldCount < Shop.maxShields && totalCoins >= Shop.shieldCost;
+
+  GameProfile buyShield() {
+    if (!canBuyShield) {
+      return this;
+    }
+    return copyWith(
+      totalCoins: totalCoins - Shop.shieldCost,
+      shieldCount: shieldCount + 1,
+    );
+  }
+
+  GameProfile consumeShield() {
+    if (shieldCount <= 0) {
+      return this;
+    }
+    return copyWith(shieldCount: shieldCount - 1);
+  }
+
+  /// Takes [amount] from the bank, or returns the profile unchanged when the
+  /// bank cannot cover it.
+  GameProfile spendCoins(int amount) {
+    if (amount < 0 || totalCoins < amount) {
+      return this;
+    }
+    return copyWith(totalCoins: totalCoins - amount);
+  }
+
+  RunLoadout get runLoadout {
+    return RunLoadout(
+      magnetDuration: Upgrades.magnet.valueAt(upgradeLevel(Upgrades.magnet)),
+      comboWindow:
+          Upgrades.comboWindow.valueAt(upgradeLevel(Upgrades.comboWindow)),
+      comboCoinValue:
+          Upgrades.comboBanana.valueAt(upgradeLevel(Upgrades.comboBanana)),
+      hasShield: shieldCount > 0,
+    );
+  }
+
   Map<String, Object?> toPrefs() {
     return {
       'highScore': highScore,
@@ -144,6 +221,8 @@ class GameProfile {
       'ownedSkinIds': ownedSkinIds,
       'equippedSkinId': equippedSkinId,
       'dailyReward': jsonEncode(dailyRewardState.toMap()),
+      'upgradeLevels': jsonEncode(upgradeLevels),
+      'shieldCount': shieldCount,
     };
   }
 
@@ -182,6 +261,22 @@ class GameProfile {
       }
     }
 
+    Map<String, int> decodeUpgradeLevels(Object? raw) {
+      if (raw is! String || raw.isEmpty) {
+        return Map<String, int>.from(initial.upgradeLevels);
+      }
+      try {
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
+        return {
+          for (final upgrade in Upgrades.all)
+            upgrade.id: ((decoded[upgrade.id] as num?)?.toInt() ?? 0)
+                .clamp(0, UpgradeDefinition.maxLevel),
+        };
+      } on Object {
+        return Map<String, int>.from(initial.upgradeLevels);
+      }
+    }
+
     return GameProfile(
       highScore: (map['highScore'] as int?) ?? 0,
       totalCoins: (map['totalCoins'] as int?) ?? 0,
@@ -195,6 +290,9 @@ class GameProfile {
       equippedSkinId:
           (map['equippedSkinId'] as String?) ?? BananaSkins.defaultId,
       dailyRewardState: decodeDailyReward(map['dailyReward']),
+      upgradeLevels: decodeUpgradeLevels(map['upgradeLevels']),
+      shieldCount:
+          ((map['shieldCount'] as int?) ?? 0).clamp(0, Shop.maxShields),
     );
   }
 
