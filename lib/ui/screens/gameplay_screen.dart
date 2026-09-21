@@ -653,40 +653,44 @@ class _OverlayPanel extends StatelessWidget {
       color: Colors.black.withValues(alpha: 0.42),
       alignment: Alignment.center,
       padding: const EdgeInsets.all(20),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 420),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                color: AppColors.ink,
+      // The run summary is taller than a small phone's viewport; scrolling
+      // beats clipping the Main Menu button off the bottom.
+      child: SingleChildScrollView(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 420),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.ink,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.softInk,
-                fontWeight: FontWeight.w700,
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.softInk,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-            if (extra != null) ...[
+              if (extra != null) ...[
+                const SizedBox(height: 18),
+                extra!,
+              ],
               const SizedBox(height: 18),
-              extra!,
+              ...actions,
             ],
-            const SizedBox(height: 18),
-            ...actions,
-          ],
+          ),
         ),
       ),
     );
