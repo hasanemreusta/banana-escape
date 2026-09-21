@@ -7,8 +7,13 @@ import 'package:banana_escape/core/game_session_result.dart';
 import 'package:banana_escape/core/hud_snapshot.dart';
 import 'package:banana_escape/game/banana_escape_game.dart';
 import 'package:banana_escape/models/game_profile.dart';
+import 'package:banana_escape/models/shop_overview.dart';
 import 'package:banana_escape/models/skin.dart';
+import 'package:banana_escape/models/upgrade.dart';
 import 'package:banana_escape/services/app_services.dart';
+import 'package:banana_escape/ui/format.dart';
+import 'package:banana_escape/ui/screens/shop_screen.dart';
+import 'package:banana_escape/ui/widgets/shop_nudge_card.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
@@ -32,6 +37,14 @@ class _GameplayScreenState extends State<GameplayScreen>
   late Widget _gameView;
   Timer? _hudTimer;
   GameSessionResult? _lastResult;
+
+  /// A crash waiting on the player's answer to the continue offer. The session
+  /// is only applied to the profile once the run is really over.
+  GameSessionResult? _pendingRevive;
+
+  /// Set while a continue offer is being answered, so a tap landing together
+  /// with the countdown expiring cannot apply the session twice.
+  bool _reviveResolving = false;
   bool _paused = false;
   double _dragDistanceX = 0;
   double _dragDistanceYAbs = 0;
@@ -59,24 +72,33 @@ class _GameplayScreenState extends State<GameplayScreen>
   void _createGame() {
     _hudTimer?.cancel();
     _lastResult = null;
+    _pendingRevive = null;
+    _reviveResolving = false;
     _paused = false;
     _hudNotifier.value = HudSnapshot.empty;
     unawaited(widget.services.audio.playGameplayMusic());
     _game = BananaEscapeGame(
       audio: widget.services.audio,
       skin: BananaSkins.byId(widget.services.profile.equippedSkinId),
+      loadout: widget.services.profile.runLoadout,
+      // Saved the moment it breaks, so quitting mid-run cannot refund it.
+      onShieldUsed: () => unawaited(
+        widget.services.saveProfile(widget.services.profile.consumeShield()),
+      ),
       onGameOver: (result) async {
         _shakeController.forward(from: 0);
         unawaited(widget.services.audio.pauseMusic());
-        final updated = widget.services.profile.applySession(result);
-        await widget.services.saveProfile(updated);
         if (!mounted) {
           return;
         }
-        setState(() {
-          _lastResult = result;
-        });
         _hudNotifier.value = _game.hudSnapshot;
+        if (widget.services.profile.totalCoins >= _reviveCost) {
+          setState(() {
+            _pendingRevive = result;
+          });
+          return;
+        }
+        await _finishSession(result);
       },
     );
     _gameView = RepaintBoundary(
@@ -84,7 +106,7 @@ class _GameplayScreenState extends State<GameplayScreen>
     );
 
     _hudTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
-      if (!mounted || _paused || _lastResult != null) {
+      if (!mounted || _paused || _runStopped) {
         return;
       }
       final nextHud = _game.hudSnapshot;
@@ -95,8 +117,57 @@ class _GameplayScreenState extends State<GameplayScreen>
     });
   }
 
+  int get _reviveCost => Shop.reviveCost(_game.revivesUsed);
+
+  Future<void> _finishSession(GameSessionResult result) async {
+    final updated = widget.services.profile.applySession(result);
+    await widget.services.saveProfile(updated);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _pendingRevive = null;
+      _lastResult = result;
+    });
+  }
+
+  Future<void> _acceptRevive() async {
+    final cost = _reviveCost;
+    final profile = widget.services.profile;
+    if (_pendingRevive == null ||
+        _reviveResolving ||
+        profile.totalCoins < cost) {
+      return;
+    }
+    _reviveResolving = true;
+    await widget.services.audio.playButton();
+    await widget.services.saveProfile(profile.spendCoins(cost));
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _pendingRevive = null;
+      _reviveResolving = false;
+    });
+    _game.revive();
+    unawaited(widget.services.audio.resumeMusic());
+  }
+
+  Future<void> _declineRevive() async {
+    final result = _pendingRevive;
+    if (result == null || _reviveResolving) {
+      return;
+    }
+    _reviveResolving = true;
+    await widget.services.audio.playButton();
+    await _finishSession(result);
+    _reviveResolving = false;
+  }
+
+  bool get _runStopped => _lastResult != null || _pendingRevive != null;
+
   Future<void> _togglePause() async {
-    if (_lastResult != null) {
+    if (_runStopped) {
       return;
     }
     await widget.services.audio.playButton();
@@ -120,6 +191,21 @@ class _GameplayScreenState extends State<GameplayScreen>
     setState(_createGame);
   }
 
+  Future<void> _openShop(ShopTab tab) async {
+    await widget.services.audio.playButton();
+    if (!mounted) {
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ShopScreen(services: widget.services, initialTab: tab),
+      ),
+    );
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   Future<void> _backToMenu() async {
     await widget.services.audio.playButton();
     await widget.services.audio.stopMusic();
@@ -136,7 +222,7 @@ class _GameplayScreenState extends State<GameplayScreen>
   }
 
   void _handleSwipeUpdate(DragUpdateDetails details) {
-    if (_lastResult != null || _paused || _swipeConsumed) {
+    if (_runStopped || _paused || _swipeConsumed) {
       return;
     }
     _dragDistanceX += details.delta.dx;
@@ -155,7 +241,7 @@ class _GameplayScreenState extends State<GameplayScreen>
   }
 
   void _handleSwipeEnd(DragEndDetails details) {
-    if (_lastResult != null || _paused) {
+    if (_runStopped || _paused) {
       _resetSwipeState();
       return;
     }
@@ -230,6 +316,7 @@ class _GameplayScreenState extends State<GameplayScreen>
                         magnetRemaining: hud.magnetRemaining,
                         statusText: hud.statusText,
                         comboMultiplier: hud.comboMultiplier,
+                        shieldReady: hud.shieldReady,
                       ),
                     ),
                   ),
@@ -261,6 +348,16 @@ class _GameplayScreenState extends State<GameplayScreen>
                       onMenu: _backToMenu,
                     ),
                   ),
+                if (_pendingRevive != null)
+                  Positioned.fill(
+                    child: _ReviveOverlay(
+                      cost: _reviveCost,
+                      bank: profile.totalCoins,
+                      runCoins: _pendingRevive!.coinsCollected,
+                      onRevive: _acceptRevive,
+                      onDecline: _declineRevive,
+                    ),
+                  ),
                 if (_lastResult != null)
                   Positioned.fill(
                     child: _GameOverOverlay(
@@ -268,6 +365,7 @@ class _GameplayScreenState extends State<GameplayScreen>
                       profile: profile,
                       onRetry: _restart,
                       onMenu: _backToMenu,
+                      onShop: _openShop,
                     ),
                   ),
               ],
@@ -287,6 +385,7 @@ class _HudOverlay extends StatelessWidget {
     required this.stage,
     required this.magnetRemaining,
     required this.comboMultiplier,
+    required this.shieldReady,
     this.statusText,
   });
 
@@ -296,6 +395,7 @@ class _HudOverlay extends StatelessWidget {
   final int stage;
   final double magnetRemaining;
   final int comboMultiplier;
+  final bool shieldReady;
   final String? statusText;
 
   @override
@@ -350,6 +450,14 @@ class _HudOverlay extends StatelessWidget {
                         value: 'x$comboMultiplier',
                         accent: AppColors.panelAlt,
                         icon: Icons.local_fire_department_rounded,
+                        compact: narrow,
+                      ),
+                    if (shieldReady)
+                      _HudPill(
+                        label: 'Shield',
+                        value: 'Ready',
+                        accent: AppColors.mint,
+                        icon: Icons.shield_rounded,
                         compact: narrow,
                       ),
                     if (magnetRemaining > 0)
@@ -500,22 +608,148 @@ class _PauseOverlay extends StatelessWidget {
   }
 }
 
+class _ReviveOverlay extends StatefulWidget {
+  const _ReviveOverlay({
+    required this.cost,
+    required this.bank,
+    required this.runCoins,
+    required this.onRevive,
+    required this.onDecline,
+  });
+
+  final int cost;
+  final int bank;
+  final int runCoins;
+  final VoidCallback onRevive;
+  final VoidCallback onDecline;
+
+  /// Long enough to read the offer, short enough that walking away from the
+  /// phone still ends the run.
+  static const Duration countdown = Duration(seconds: 5);
+
+  @override
+  State<_ReviveOverlay> createState() => _ReviveOverlayState();
+}
+
+class _ReviveOverlayState extends State<_ReviveOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = AnimationController(vsync: this, duration: _ReviveOverlay.countdown)
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          widget.onDecline();
+        }
+      })
+      ..forward();
+  }
+
+  @override
+  void dispose() {
+    _timer.dispose();
+    super.dispose();
+  }
+
+  void _revive() {
+    _timer.stop();
+    widget.onRevive();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _OverlayPanel(
+      title: 'So close!',
+      subtitle: 'Spend coins to shake off the blender and keep this run going.',
+      extra: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _ResultTile(
+                  label: 'Your coins',
+                  value: formatCoins(widget.bank),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ResultTile(
+                  label: 'This run',
+                  value: '+${widget.runCoins}',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          AnimatedBuilder(
+            animation: _timer,
+            builder: (context, _) {
+              final left = (_ReviveOverlay.countdown.inSeconds *
+                      (1 - _timer.value))
+                  .ceil();
+              return Column(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: 1 - _timer.value,
+                      minHeight: 8,
+                      backgroundColor: AppColors.panelAlt,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.orange,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Run ends in ${left}s',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.softInk,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+      actions: [
+        _ActionButton(
+          label: 'Continue for ${formatCoins(widget.cost)} coins',
+          onPressed: _revive,
+          primary: true,
+        ),
+        _ActionButton(label: 'No thanks', onPressed: widget.onDecline),
+      ],
+    );
+  }
+}
+
 class _GameOverOverlay extends StatelessWidget {
   const _GameOverOverlay({
     required this.result,
     required this.profile,
     required this.onRetry,
     required this.onMenu,
+    required this.onShop,
   });
 
   final GameSessionResult result;
   final GameProfile profile;
   final VoidCallback onRetry;
   final VoidCallback onMenu;
+  final ValueChanged<ShopTab> onShop;
 
   @override
   Widget build(BuildContext context) {
     final isNewBest = result.score >= profile.highScore && result.score > 0;
+    final overview = ShopOverview.of(profile);
+    final openMissions =
+        profile.missionViews.where((mission) => !mission.isComplete).toList();
     return _OverlayPanel(
       title: 'Blended!',
       subtitle: 'Too ripe to quit. Hit retry and beat that run.',
@@ -575,55 +809,61 @@ class _GameOverOverlay extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Mission Progress',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.ink,
-                  ),
-            ),
+          const SizedBox(height: 12),
+          ShopNudgeCard(
+            overview: overview,
+            coins: profile.totalCoins,
+            compact: true,
+            onOpen: () => onShop(overview.nextGoal?.tab ?? ShopTab.upgrades),
           ),
-          const SizedBox(height: 10),
-          ...profile.missionViews.map(
-            (mission) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.panelAlt,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        mission.definition.title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.ink,
-                        ),
-                      ),
+          if (openMissions.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Mission Progress',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.ink,
                     ),
-                    Text(
-                      '${mission.progress.clamp(0, mission.definition.target)}/${mission.definition.target}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: mission.isComplete
-                            ? AppColors.leafGreen
-                            : AppColors.softInk,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
-          ),
+            const SizedBox(height: 10),
+            for (final mission in openMissions)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.panelAlt,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          mission.definition.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${mission.progress}/${mission.definition.target}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.softInk,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ],
       ),
       actions: [

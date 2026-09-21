@@ -1,14 +1,18 @@
 import 'package:banana_escape/config/app_colors.dart';
 import 'package:banana_escape/config/app_copy.dart';
 import 'package:banana_escape/models/game_profile.dart';
+import 'package:banana_escape/models/shop_overview.dart';
 import 'package:banana_escape/models/skin.dart';
+import 'package:banana_escape/models/upgrade.dart';
 import 'package:banana_escape/services/app_services.dart';
+import 'package:banana_escape/ui/format.dart';
 import 'package:banana_escape/ui/screens/gameplay_screen.dart';
-import 'package:banana_escape/ui/widgets/banana_preview.dart';
+import 'package:banana_escape/ui/screens/shop_screen.dart';
+import 'package:banana_escape/ui/shop_actions.dart';
+import 'package:banana_escape/ui/widgets/banana_stage.dart';
+import 'package:banana_escape/ui/widgets/coin_balance_pill.dart';
 import 'package:banana_escape/ui/widgets/daily_reward_card.dart';
-import 'package:banana_escape/ui/widgets/menu_stat_chip.dart';
 import 'package:banana_escape/ui/widgets/mission_card.dart';
-import 'package:banana_escape/ui/widgets/skin_preview_card.dart';
 import 'package:flutter/material.dart';
 
 class MainMenuScreen extends StatefulWidget {
@@ -24,12 +28,24 @@ class MainMenuScreen extends StatefulWidget {
 }
 
 class _MainMenuScreenState extends State<MainMenuScreen> {
+  /// The daily reward pops up by itself once per launch while it is waiting,
+  /// then only lives behind its tab — nagging on every return is worse.
+  static bool _dailyPromptShown = false;
+
   GameProfile get profile => widget.services.profile;
 
   @override
   void initState() {
     super.initState();
     widget.services.audio.playMenuMusic();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_dailyPromptShown &&
+          mounted &&
+          profile.canClaimDailyReward(DateTime.now())) {
+        _dailyPromptShown = true;
+        _openDaily();
+      }
+    });
   }
 
   Future<void> _toggleSound() async {
@@ -59,6 +75,42 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     setState(() {});
   }
 
+  Future<void> _openShop([ShopTab tab = ShopTab.upgrades]) async {
+    await widget.services.audio.playButton();
+    if (!mounted) {
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ShopScreen(services: widget.services, initialTab: tab),
+      ),
+    );
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _quickBuyShield() async {
+    final outcome = await ShopActions(widget.services).buyShield();
+    _showMessage(outcome.message);
+  }
+
+  Future<void> _openDaily() async {
+    await widget.services.audio.playButton();
+    if (!mounted) {
+      return;
+    }
+    await _showSheet(
+      title: 'Daily Bunch',
+      subtitle: 'Come back every day — the reward grows with your streak.',
+      child: DailyRewardCard(
+        state: profile.dailyRewardState,
+        now: DateTime.now(),
+        onClaim: _claimDailyReward,
+      ),
+    );
+  }
+
   Future<void> _claimDailyReward() async {
     await widget.services.audio.playButton();
     final now = DateTime.now();
@@ -71,48 +123,106 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     if (!mounted) {
       return;
     }
-    setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Daily bunch collected: +$reward coins'),
-        behavior: SnackBarBehavior.floating,
+    Navigator.of(context).pop();
+    _showMessage('Daily bunch collected: +${formatCoins(reward)} coins');
+  }
+
+  Future<void> _openMissions() async {
+    await widget.services.audio.playButton();
+    if (!mounted) {
+      return;
+    }
+    await _showSheet(
+      title: 'Missions',
+      subtitle: 'Short goals that add a bit of "one more run".',
+      child: Column(
+        children: [
+          for (final mission in profile.missionViews) ...[
+            MissionCard(mission: mission),
+            const SizedBox(height: 12),
+          ],
+        ],
       ),
     );
   }
 
-  Future<void> _handleSkinAction(BananaSkin skin) async {
-    await widget.services.audio.playButton();
-    final current = profile;
-    String message;
+  Future<void> _showSheet({
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: AppColors.softInk.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.ink,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: AppColors.softInk,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              child,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-    if (skin.id == current.equippedSkinId) {
-      message = '${skin.name} already equipped.';
-    } else if (skin.isOwned(current.ownedSkinIds)) {
-      await widget.services.saveProfile(current.equipSkin(skin.id));
-      message = '${skin.name} equipped.';
-    } else if (current.canUnlockSkin(skin)) {
-      await widget.services.saveProfile(current.unlockSkin(skin));
-      message = '${skin.name} unlocked and equipped.';
-    } else {
-      final missing = skin.cost - current.totalCoins;
-      message = 'Need $missing more coins for ${skin.name}.';
-    }
-
+  void _showMessage(String message) {
     if (!mounted) {
       return;
     }
     setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   @override
   Widget build(BuildContext context) {
     final equippedSkin = BananaSkins.byId(profile.equippedSkinId);
+    final shopOverview = ShopOverview.of(profile);
+    final missionsDone =
+        profile.missionViews.where((mission) => mission.isComplete).length;
+    final dailyReady = profile.canClaimDailyReward(DateTime.now());
 
     return Scaffold(
       body: DecoratedBox(
@@ -130,180 +240,119 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
         child: Stack(
           children: [
             const Positioned.fill(
-              child: IgnorePointer(
-                child: _MenuBackdrop(),
-              ),
+              child: IgnorePointer(child: _MenuBackdrop()),
             ),
             SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-                    child: ConstrainedBox(
-                      constraints:
-                          BoxConstraints(minHeight: constraints.maxHeight - 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      AppCopy.gameTitle,
-                                      style: TextStyle(
-                                        fontSize: 36,
-                                        fontWeight: FontWeight.w900,
-                                        color: AppColors.ink,
-                                        height: 0.96,
-                                      ),
-                                    ),
-                                    SizedBox(height: 8),
-                                    Text(
-                                      AppCopy.menuTagline,
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                        color: AppColors.orange,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      AppCopy.menuSubtitle,
-                                      style: TextStyle(
-                                        color: AppColors.softInk,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton.filledTonal(
-                                onPressed: _toggleSound,
-                                style: IconButton.styleFrom(
-                                  backgroundColor:
-                                      Colors.white.withValues(alpha: 0.88),
-                                ),
-                                icon: Icon(profile.soundOn
-                                    ? Icons.volume_up
-                                    : Icons.volume_off),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          _HeroCard(
-                            onPlay: _startGame,
-                            equippedSkin: equippedSkin,
-                          ),
-                          const SizedBox(height: 18),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              MenuStatChip(
-                                label: 'High Score',
-                                value: '${profile.highScore}',
-                                icon: Icons.emoji_events_rounded,
-                              ),
-                              MenuStatChip(
-                                label: 'Total Coins',
-                                value: '${profile.totalCoins}',
-                                icon: Icons.monetization_on_rounded,
-                              ),
-                              MenuStatChip(
-                                label: 'Runs',
-                                value: '${profile.totalRuns}',
-                                icon: Icons.repeat_rounded,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          DailyRewardCard(
-                            state: profile.dailyRewardState,
-                            now: DateTime.now(),
-                            onClaim: _claimDailyReward,
-                          ),
-                          const SizedBox(height: 24),
-                          const _SectionHeader(
-                            title: 'Banana Closet',
-                            subtitle:
-                                'Future skins are already modeled into the save data.',
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            height: 248,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: BananaSkins.all.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(width: 12),
-                              itemBuilder: (context, index) {
-                                final skin = BananaSkins.all[index];
-                                return SkinPreviewCard(
-                                  skin: skin,
-                                  isOwned: skin.isOwned(profile.ownedSkinIds),
-                                  isEquipped: skin.id == profile.equippedSkinId,
-                                  availableCoins: profile.totalCoins,
-                                  onPressed: () => _handleSkinAction(skin),
-                                  buttonLabel: skin.id == profile.equippedSkinId
-                                      ? 'Equipped'
-                                      : skin.isOwned(profile.ownedSkinIds)
-                                          ? 'Equip'
-                                          : 'Buy',
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 22),
-                          const _SectionHeader(
-                            title: 'Mission Board',
-                            subtitle:
-                                'Short goals that add a bit of "one more run".',
-                          ),
-                          const SizedBox(height: 10),
-                          for (final mission in profile.missionViews) ...[
-                            MissionCard(mission: mission),
-                            const SizedBox(height: 12),
-                          ],
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              borderRadius: BorderRadius.circular(22),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.06),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.swipe_rounded,
-                                    color: AppColors.orange),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    AppCopy.onboarding,
-                                    style: TextStyle(
-                                      color: AppColors.ink,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Column(
+                  children: [
+                    _TopBar(
+                      highScore: profile.highScore,
+                      coins: profile.totalCoins,
+                      soundOn: profile.soundOn,
+                      onSound: _toggleSound,
+                      onCoins: _openShop,
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      AppCopy.gameTitle,
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.ink,
+                        height: 1,
                       ),
                     ),
-                  );
-                },
+                    const SizedBox(height: 4),
+                    const Text(
+                      AppCopy.menuTagline,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.orange,
+                      ),
+                    ),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final size = (constraints.maxHeight * 0.6)
+                              .clamp(90.0, 210.0)
+                              .toDouble();
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: () => _openShop(ShopTab.skins),
+                                child: BananaStage(
+                                  skin: equippedSkin,
+                                  size: size,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _SkinNameTag(
+                                skin: equippedSkin,
+                                onTap: () => _openShop(ShopTab.skins),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    _LoadoutStrip(
+                      shieldCount: profile.shieldCount,
+                      canBuyShield: profile.canBuyShield,
+                      onQuickShield: _quickBuyShield,
+                    ),
+                    const SizedBox(height: 12),
+                    _PlayButton(onPressed: _startGame),
+                    const SizedBox(height: 8),
+                    const Text(
+                      AppCopy.onboarding,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.softInk,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        _NavTile(
+                          icon: Icons.storefront_rounded,
+                          label: 'Shop',
+                          color: AppColors.orange,
+                          badge: shopOverview.affordableCount > 0
+                              ? '${shopOverview.affordableCount}'
+                              : null,
+                          onTap: _openShop,
+                        ),
+                        _NavTile(
+                          icon: Icons.checkroom_rounded,
+                          label: 'Skins',
+                          color: const Color(0xFF9B59D6),
+                          onTap: () => _openShop(ShopTab.skins),
+                        ),
+                        _NavTile(
+                          icon: Icons.flag_rounded,
+                          label: 'Missions',
+                          color: AppColors.ocean,
+                          badge: '$missionsDone/${profile.missionViews.length}',
+                          badgeColor: AppColors.ink,
+                          onTap: _openMissions,
+                        ),
+                        _NavTile(
+                          icon: Icons.card_giftcard_rounded,
+                          label: 'Daily',
+                          color: AppColors.leafDeep,
+                          badge: dailyReady ? '!' : null,
+                          onTap: _openDaily,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -313,264 +362,357 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   }
 }
 
-class _HeroCard extends StatelessWidget {
-  const _HeroCard({
-    required this.onPlay,
-    required this.equippedSkin,
+class _TopBar extends StatelessWidget {
+  const _TopBar({
+    required this.highScore,
+    required this.coins,
+    required this.soundOn,
+    required this.onSound,
+    required this.onCoins,
   });
 
-  final VoidCallback onPlay;
-  final BananaSkin equippedSkin;
+  final int highScore;
+  final int coins;
+  final bool soundOn;
+  final VoidCallback onSound;
+  final VoidCallback onCoins;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFE56D), Color(0xFFFFA24A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 22,
-            offset: const Offset(0, 16),
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.emoji_events_rounded,
+                color: AppColors.orange,
+                size: 20,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                formatCoins(highScore),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.ink,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        CoinBalancePill(coins: coins, onTap: onCoins),
+        const SizedBox(width: 8),
+        IconButton.filled(
+          onPressed: onSound,
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.white.withValues(alpha: 0.94),
+            foregroundColor: AppColors.ink,
+          ),
+          icon: Icon(
+            soundOn ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SkinNameTag extends StatelessWidget {
+  const _SkinNameTag({required this.skin, required this.onTap});
+
+  final BananaSkin skin;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.75),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                skin.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.ink,
+                ),
+              ),
+              const SizedBox(width: 8),
+              RarityChip(rarity: skin.rarity),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.softInk,
+              ),
+            ],
+          ),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 124,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withValues(alpha: 0.24),
-                  Colors.white.withValues(alpha: 0.08),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    );
+  }
+}
+
+/// The one button the whole screen leads to. A slow pulse keeps the eye on
+/// it without the cheap look of a blinking label.
+class _PlayButton extends StatefulWidget {
+  const _PlayButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  State<_PlayButton> createState() => _PlayButtonState();
+}
+
+class _PlayButtonState extends State<_PlayButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: Tween<double>(begin: 1, end: 1.035).animate(
+        CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: 66,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.orange.withValues(alpha: 0.45),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: FilledButton(
+            onPressed: widget.onPressed,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.orange,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(22),
               ),
             ),
-            child: Stack(
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Positioned(
-                  left: 18,
-                  right: 18,
-                  bottom: 18,
-                  child: Container(
-                    height: 16,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.ink.withValues(alpha: 0.0),
-                          AppColors.ink.withValues(alpha: 0.18),
-                          AppColors.ink.withValues(alpha: 0.0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 18,
-                  bottom: 4,
-                  child: Transform.rotate(
-                    angle: -0.16,
-                    child: Container(
-                      width: 94,
-                      height: 94,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: BananaPreview(
-                        skin: equippedSkin,
-                        angle: -0.1,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 16,
-                  top: 16,
-                  child: Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.18),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 24,
-                  bottom: 16,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.ink.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.local_fire_department_rounded,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Fast run energy',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
+                Icon(Icons.play_arrow_rounded, size: 34),
+                SizedBox(width: 6),
+                Text(
+                  'PLAY',
+                  style: TextStyle(
+                    fontSize: 24,
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 18),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.38),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: const Text(
-                        'Absurd endless runner',
-                        style: TextStyle(
-                          color: AppColors.ink,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Escape the blender truck\nwith style.',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.ink,
-                        height: 1.0,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Quick runs, juicy feedback, and a mascot banana that actually feels alive.',
-                      style: TextStyle(
-                        color: AppColors.ink,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+        ),
+      ),
+    );
+  }
+}
+
+/// What the next run starts with, sitting right above Play so a shield can
+/// be bought on the way in rather than from a screen two taps away.
+class _LoadoutStrip extends StatelessWidget {
+  const _LoadoutStrip({
+    required this.shieldCount,
+    required this.canBuyShield,
+    required this.onQuickShield,
+  });
+
+  final int shieldCount;
+  final bool canBuyShield;
+  final VoidCallback onQuickShield;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasShield = shieldCount > 0;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            hasShield ? Icons.shield_rounded : Icons.shield_outlined,
+            color: hasShield ? AppColors.leafDeep : AppColors.softInk,
+            size: 22,
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: onPlay,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.ink,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 60),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  child: const Text('Play Now'),
-                ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              hasShield ? 'Shields ×$shieldCount ready' : 'No shield this run',
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                color: AppColors.ink,
               ),
-              const SizedBox(width: 12),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.local_fire_department_rounded,
-                        color: AppColors.ink),
-                    SizedBox(width: 8),
-                    Text(
-                      'Fast restart',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
+          if (shieldCount < Shop.maxShields)
+            FilledButton.icon(
+              onPressed: onQuickShield,
+              style: FilledButton.styleFrom(
+                backgroundColor: canBuyShield
+                    ? AppColors.leafGreen
+                    : const Color(0xFFD9D4DC),
+                foregroundColor:
+                    canBuyShield ? Colors.white : AppColors.softInk,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              icon: Icon(
+                canBuyShield ? Icons.add_rounded : Icons.lock_rounded,
+                size: 18,
+              ),
+              label: Text(
+                formatCoins(Shop.shieldCost),
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    required this.subtitle,
+class _NavTile extends StatelessWidget {
+  const _NavTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.badge,
+    this.badgeColor = AppColors.coral,
   });
 
-  final String title;
-  final String subtitle;
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  final String? badge;
+  final Color badgeColor;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: AppColors.ink,
-          ),
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Stack(
+          clipBehavior: Clip.none,
+          fit: StackFit.passthrough,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(20),
+                child: Ink(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.94),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.07),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(icon, color: color),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (badge != null)
+              Positioned(
+                top: -6,
+                right: -2,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: Text(
+                    badge!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            color: AppColors.softInk,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
