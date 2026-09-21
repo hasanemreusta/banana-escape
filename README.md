@@ -11,6 +11,9 @@ You are a banana. A blender truck wants you. Swipe or die trying.
 [![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Flame](https://img.shields.io/badge/Flame-1.38-FF6B35)](https://flame-engine.org)
 [![Android](https://img.shields.io/badge/Android-API%2024–36-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
+[![Google Play](https://img.shields.io/badge/Google_Play-Download-414141?logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.heudev.bananaescape)
+
+**[Get it on Google Play](https://play.google.com/store/apps/details?id=com.heudev.bananaescape)**
 
 </div>
 
@@ -31,8 +34,8 @@ and road all shift palette together, and stars fade in as it darkens:
 
 <img src="assets/screenshots/meta.png" width="240" alt="Daily reward, skins and missions" align="right">
 
-The meta layer: a seven-day login streak with an escalating reward table, four
-skins priced in coins, and three missions that persist across runs. Every banana
+The meta layer: a seven-day login streak with an escalating reward table, eight
+skins in rarity tiers, and three missions that persist across runs. Every banana
 in the closet is the same code-drawn character with a different palette — adding
 a skin is a colour table entry, not an art export.
 
@@ -60,7 +63,8 @@ change instead of a re-export.
 | **Combo** | Consecutive pickups build a multiplier up to ×5, and it lapses if you go quiet |
 | **Power-ups** | Magnet pulls nearby coins; combo bananas pay a lump sum |
 | **Style points** | Threading a gap at the last moment scores a near-miss bonus |
-| **Meta** | Daily login streak, four unlockable skins, three missions, persistent high score |
+| **Shop** | Coins buy five-level upgrades (longer magnet, steadier combo, juicier bananas, 500 → 25,000 per step), one-hit shields, and a mid-run continue that doubles in price each time |
+| **Meta** | Daily login streak, eight skins from Common to Legendary (up to 50,000 coins), three missions, persistent high score |
 
 ## How it looks in motion
 
@@ -159,24 +163,15 @@ The Android config tracks the Flutter SDK rather than pinning numbers:
 
 ## Status
 
-In closed testing on Google Play; production rollout follows once the test track
-completes. The release build is signed, targets API 36, and the store listing
-assets are in `assets/branding/`.
+Live on [Google Play](https://play.google.com/store/apps/details?id=com.heudev.bananaescape). The release build is signed, targets API 36,
+and the store listing assets are in `assets/branding/`.
 
 The game collects no data, uses no analytics, and has no network calls —
 `AdService` exists as an abstraction with a mock implementation, deliberately
 unwired.
 
-### Want to test it?
-
-The closed testing track is open and taking testers. Google Play requires each
-tester to be added by the Google account email tied to their device, so send
-that address to **hasanemreusta5@gmail.com** and you will get the opt-in link
-back.
-
-Testing is free, the build is the same one headed for production, and feedback
-on feel — collision fairness, difficulty ramp, whether the day/night cycle reads
-— is the most useful thing you can send back.
+Feedback on feel — collision fairness, difficulty ramp, the coin economy — is
+welcome at **hasanemreusta5@gmail.com** or as a store review.
 
 ## License
 
