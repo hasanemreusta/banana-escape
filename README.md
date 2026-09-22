@@ -57,13 +57,13 @@ change instead of a re-export.
 
 | | |
 |---|---|
-| **Controls** | Swipe left / right to change lane |
+| **Controls** | Swipe left / right to change lane; double-tap to raise a shield |
 | **Goal** | Survive, collect coins, chase the high score |
 | **Pressure** | Speed and obstacle density climb on a timer; a stage banner marks each step up |
 | **Combo** | Consecutive pickups build a multiplier up to ×5, and it lapses if you go quiet |
 | **Power-ups** | Magnet pulls nearby coins; combo bananas pay a lump sum |
 | **Style points** | Threading a gap at the last moment scores a near-miss bonus |
-| **Shop** | Coins buy five-level upgrades (longer magnet, steadier combo, juicier bananas, 500 → 25,000 per step), one-hit shields, and a mid-run continue that doubles in price each time |
+| **Shop** | Coins buy five-level upgrades (longer magnet, steadier combo, juicier bananas, 500 → 25,000 per step), shields you raise yourself (five seconds, absorbs one crash), and a mid-run continue that doubles in price each time |
 | **Meta** | Daily login streak, eight skins from Common to Legendary (up to 50,000 coins), three missions, persistent high score |
 
 ## How it looks in motion
