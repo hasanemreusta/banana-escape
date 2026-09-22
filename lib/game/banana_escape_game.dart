@@ -14,6 +14,7 @@ import 'package:banana_escape/game/components/player_component.dart';
 import 'package:banana_escape/game/data/collectible_type.dart';
 import 'package:banana_escape/game/data/obstacle_type.dart';
 import 'package:banana_escape/game/systems/collision_rules.dart';
+import 'package:banana_escape/game/systems/shield_state.dart';
 import 'package:banana_escape/game/systems/spawn_controller.dart';
 import 'package:banana_escape/game/systems/spawn_host.dart';
 import 'package:banana_escape/models/skin.dart';
@@ -33,7 +34,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
         _skin = skin,
         _onGameOver = onGameOver,
         _onShieldUsed = onShieldUsed,
-        _shieldReady = loadout.hasShield;
+        _shields = ShieldState(stock: loadout.shieldStock);
 
   final AudioService _audio;
   final BananaSkin _skin;
@@ -41,6 +42,8 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
   /// Called whenever the run stops on a crash. The run can still be carried
   /// on with [revive], so this is not necessarily the final result.
   final ValueChanged<GameSessionResult> _onGameOver;
+  /// Called when a shield is spent from the stock, so the profile can be
+  /// saved at once — quitting mid-run must not refund it.
   final VoidCallback? _onShieldUsed;
   final RunLoadout loadout;
 
@@ -66,7 +69,8 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
   double _statusRemaining = 0;
   String? _statusText;
   bool _ended = false;
-  bool _shieldReady;
+  final ShieldState _shields;
+  bool _shieldHintShown = false;
   double _invulnerableRemaining = 0;
   int revivesUsed = 0;
 
@@ -103,7 +107,8 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
 
   @override
   bool get magnetActive => _magnetRemaining > 0;
-  bool get shieldReady => _shieldReady;
+  int get shieldStock => _shields.stock;
+  bool get shieldActive => _shields.isActive;
   bool get isInvulnerable => _invulnerableRemaining > 0;
   double get magnetRemaining => _magnetRemaining;
   double get comboRemaining => _comboRemaining;
@@ -130,7 +135,8 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
         statusText: statusText,
         comboMultiplier: comboMultiplier,
         comboRemaining: comboRemaining,
-        shieldReady: shieldReady,
+        shieldStock: _shields.stock,
+        shieldRemaining: _shields.remaining,
       );
 
   @override
@@ -180,6 +186,17 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
     if (_invulnerableRemaining > 0) {
       _invulnerableRemaining = math.max(0, _invulnerableRemaining - dt);
     }
+    if (_shields.tick(dt)) {
+      _statusText = 'Shield faded';
+      _statusRemaining = 0.9;
+    }
+    // Once per run, a beat after the start, remind a player carrying shields
+    // how to use them.
+    if (!_shieldHintShown && runTime > 1.2 && _shields.stock > 0) {
+      _shieldHintShown = true;
+      _statusText = 'Double-tap to raise a shield';
+      _statusRemaining = 2.2;
+    }
     if (_comboRemaining > 0) {
       _comboRemaining = math.max(0, _comboRemaining - dt);
       if (_comboRemaining == 0) {
@@ -187,7 +204,10 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
       }
     }
     _player?.setMagnetActive(magnetActive);
-    _player?.setShieldReady(_shieldReady);
+    _player?.setShield(
+      active: _shields.isActive,
+      remaining: _shields.remaining,
+    );
     _player?.setInvulnerableRemaining(_invulnerableRemaining);
     _player?.setSpeedFactor(
       (scrollSpeed - GameConfig.initialScrollSpeed) /
@@ -335,7 +355,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
       }
       final obstacleBox = obstacle.hitbox;
       if (_shouldCrash(player, playerBox, obstacleBox)) {
-        if (_shieldReady) {
+        if (_shields.absorb()) {
           _breakShield(obstacle);
           break;
         }
@@ -528,8 +548,30 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
     return math.sqrt(dx * dx + dy * dy);
   }
 
+  /// Raises a shield from the stock. Does nothing while one is already up,
+  /// the stock is empty, or the run is stopped. Returns whether it worked.
+  bool activateShield() {
+    if (_ended || !isReady || !_shields.activate()) {
+      return false;
+    }
+    _statusText = 'Shield up!';
+    _statusRemaining = 1.0;
+    final player = _player!;
+    add(
+      FeedbackBurstComponent(
+        position: player.position.clone(),
+        color: AppColors.mint,
+        baseRadius: 40,
+        particles: 10,
+        ring: true,
+      ),
+    );
+    _audio.playCoin();
+    _onShieldUsed?.call();
+    return true;
+  }
+
   void _breakShield(ObstacleComponent obstacle) {
-    _shieldReady = false;
     _invulnerableRemaining = shieldGraceDuration;
     _statusText = 'Shield saved you!';
     _statusRemaining = 1.4;
@@ -544,7 +586,6 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
     );
     _removeObstacle(obstacle);
     _audio.playNearMiss();
-    _onShieldUsed?.call();
   }
 
   /// Carries a crashed run on: clears the road, grants a short grace period

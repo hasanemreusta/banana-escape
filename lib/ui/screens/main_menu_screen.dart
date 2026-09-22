@@ -583,7 +583,9 @@ class _LoadoutStrip extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              hasShield ? 'Shields ×$shieldCount ready' : 'No shield this run',
+              hasShield
+                  ? 'Shields ×$shieldCount · double-tap in a run'
+                  : 'No shields — grab one for tough runs',
               style: const TextStyle(
                 fontWeight: FontWeight.w900,
                 color: AppColors.ink,

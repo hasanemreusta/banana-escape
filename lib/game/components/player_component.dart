@@ -21,7 +21,8 @@ class PlayerComponent extends PositionComponent {
   double _targetX = 0;
   double _lean = 0;
   bool _magnetActive = false;
-  bool _shieldReady = false;
+  bool _shieldActive = false;
+  double _shieldRemaining = 0;
   double _invulnerableRemaining = 0;
   double _shieldPulse = 0;
   double magnetPulse = 0;
@@ -103,8 +104,11 @@ class PlayerComponent extends PositionComponent {
     _magnetActive = value;
   }
 
-  void setShieldReady(bool value) {
-    _shieldReady = value;
+  /// [remaining] drives the bubble's flicker in its final second, so the
+  /// player sees it about to drop.
+  void setShield({required bool active, required double remaining}) {
+    _shieldActive = active;
+    _shieldRemaining = remaining;
   }
 
   /// Seconds left in the post-hit grace period; the banana blinks while it
@@ -224,7 +228,9 @@ class PlayerComponent extends PositionComponent {
     if (_magnetActive) {
       _drawMagnetAura(canvas);
     }
-    if (_shieldReady) {
+    final fading =
+        _shieldRemaining < 1 && (_shieldRemaining * 8).floor().isOdd;
+    if (_shieldActive && !fading) {
       _drawShieldBubble(canvas);
     }
 

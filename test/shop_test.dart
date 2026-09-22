@@ -109,7 +109,7 @@ void main() {
       expect(loadout.magnetDuration, GameConfig.magnetDuration);
       expect(loadout.comboWindow, GameConfig.comboWindow);
       expect(loadout.comboCoinValue, GameConfig.comboCoinValue);
-      expect(loadout.hasShield, isFalse);
+      expect(loadout.shieldStock, 0);
     });
 
     test('bought levels and shields reach the run', () {
@@ -122,7 +122,7 @@ void main() {
       expect(loadout.magnetDuration, Upgrades.magnet.valueAt(2));
       expect(loadout.comboCoinValue, Upgrades.comboBanana.valueAt(1));
       expect(loadout.comboWindow, GameConfig.comboWindow);
-      expect(loadout.hasShield, isTrue);
+      expect(loadout.shieldStock, 1);
     });
   });
 

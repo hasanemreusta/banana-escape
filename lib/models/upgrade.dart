@@ -124,18 +124,19 @@ class RunLoadout {
     required this.magnetDuration,
     required this.comboWindow,
     required this.comboCoinValue,
-    required this.hasShield,
+    required this.shieldStock,
   });
 
   static const RunLoadout base = RunLoadout(
     magnetDuration: GameConfig.magnetDuration,
     comboWindow: GameConfig.comboWindow,
     comboCoinValue: GameConfig.comboCoinValue,
-    hasShield: false,
+    shieldStock: 0,
   );
 
   final double magnetDuration;
   final double comboWindow;
   final double comboCoinValue;
-  final bool hasShield;
+  /// Shields the player can raise during the run, one double-tap each.
+  final int shieldStock;
 }

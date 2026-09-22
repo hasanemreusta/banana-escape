@@ -9,7 +9,8 @@ class HudSnapshot {
     required this.statusText,
     required this.comboMultiplier,
     required this.comboRemaining,
-    required this.shieldReady,
+    required this.shieldStock,
+    required this.shieldRemaining,
   });
 
   final int score;
@@ -26,8 +27,11 @@ class HudSnapshot {
   /// Seconds left before the combo lapses.
   final double comboRemaining;
 
-  /// Whether a shield is still waiting to absorb this run's next crash.
-  final bool shieldReady;
+  /// Shields left to raise this run.
+  final int shieldStock;
+
+  /// Seconds left on the raised shield; 0 when none is up.
+  final double shieldRemaining;
 
   static const empty = HudSnapshot(
     score: 0,
@@ -39,7 +43,8 @@ class HudSnapshot {
     statusText: null,
     comboMultiplier: 1,
     comboRemaining: 0,
-    shieldReady: false,
+    shieldStock: 0,
+    shieldRemaining: 0,
   );
 
   @override
@@ -56,7 +61,9 @@ class HudSnapshot {
         other.comboMultiplier == comboMultiplier &&
         other.comboRemaining.toStringAsFixed(1) ==
             comboRemaining.toStringAsFixed(1) &&
-        other.shieldReady == shieldReady;
+        other.shieldStock == shieldStock &&
+        other.shieldRemaining.toStringAsFixed(1) ==
+            shieldRemaining.toStringAsFixed(1);
   }
 
   @override
@@ -70,6 +77,7 @@ class HudSnapshot {
         statusText,
         comboMultiplier,
         comboRemaining.toStringAsFixed(1),
-        shieldReady,
+        shieldStock,
+        shieldRemaining.toStringAsFixed(1),
       );
 }

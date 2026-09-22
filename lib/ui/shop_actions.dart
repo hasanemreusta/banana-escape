@@ -33,7 +33,7 @@ class ShopActions {
       return _short(Shop.shieldCost - current.totalCoins);
     }
     await services.saveProfile(current.buyShield());
-    return _bought('Shield ready. It kicks in on your next crash.');
+    return _bought('Shield added. Double-tap during a run to raise it.');
   }
 
   Future<PurchaseOutcome> buyUpgrade(UpgradeDefinition upgrade) async {

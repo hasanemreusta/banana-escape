@@ -207,7 +207,7 @@ class GameProfile {
           Upgrades.comboWindow.valueAt(upgradeLevel(Upgrades.comboWindow)),
       comboCoinValue:
           Upgrades.comboBanana.valueAt(upgradeLevel(Upgrades.comboBanana)),
-      hasShield: shieldCount > 0,
+      shieldStock: shieldCount,
     );
   }
 

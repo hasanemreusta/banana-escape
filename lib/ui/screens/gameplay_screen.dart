@@ -16,6 +16,7 @@ import 'package:banana_escape/ui/screens/shop_screen.dart';
 import 'package:banana_escape/ui/widgets/shop_nudge_card.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class GameplayScreen extends StatefulWidget {
   const GameplayScreen({
@@ -81,7 +82,7 @@ class _GameplayScreenState extends State<GameplayScreen>
       audio: widget.services.audio,
       skin: BananaSkins.byId(widget.services.profile.equippedSkinId),
       loadout: widget.services.profile.runLoadout,
-      // Saved the moment it breaks, so quitting mid-run cannot refund it.
+      // Saved the moment it is raised, so quitting mid-run cannot refund it.
       onShieldUsed: () => unawaited(
         widget.services.saveProfile(widget.services.profile.consumeShield()),
       ),
@@ -263,6 +264,15 @@ class _GameplayScreenState extends State<GameplayScreen>
     _swipeConsumed = false;
   }
 
+  void _handleDoubleTap() {
+    if (_runStopped || _paused) {
+      return;
+    }
+    if (_game.activateShield()) {
+      HapticFeedback.mediumImpact();
+    }
+  }
+
   void _triggerLaneMove(int direction) {
     if (direction < 0) {
       _game.moveLeft();
@@ -285,6 +295,7 @@ class _GameplayScreenState extends State<GameplayScreen>
             onPanUpdate: _handleSwipeUpdate,
             onPanEnd: _handleSwipeEnd,
             onPanCancel: _resetSwipeState,
+            onDoubleTap: _handleDoubleTap,
             child: Stack(
               children: [
                 Positioned.fill(
@@ -316,7 +327,8 @@ class _GameplayScreenState extends State<GameplayScreen>
                         magnetRemaining: hud.magnetRemaining,
                         statusText: hud.statusText,
                         comboMultiplier: hud.comboMultiplier,
-                        shieldReady: hud.shieldReady,
+                        shieldStock: hud.shieldStock,
+                        shieldRemaining: hud.shieldRemaining,
                       ),
                     ),
                   ),
@@ -385,7 +397,8 @@ class _HudOverlay extends StatelessWidget {
     required this.stage,
     required this.magnetRemaining,
     required this.comboMultiplier,
-    required this.shieldReady,
+    required this.shieldStock,
+    required this.shieldRemaining,
     this.statusText,
   });
 
@@ -395,7 +408,8 @@ class _HudOverlay extends StatelessWidget {
   final int stage;
   final double magnetRemaining;
   final int comboMultiplier;
-  final bool shieldReady;
+  final int shieldStock;
+  final double shieldRemaining;
   final String? statusText;
 
   @override
@@ -452,12 +466,19 @@ class _HudOverlay extends StatelessWidget {
                         icon: Icons.local_fire_department_rounded,
                         compact: narrow,
                       ),
-                    if (shieldReady)
+                    if (shieldRemaining > 0)
                       _HudPill(
                         label: 'Shield',
-                        value: 'Ready',
+                        value: '${shieldRemaining.toStringAsFixed(1)}s',
                         accent: AppColors.mint,
                         icon: Icons.shield_rounded,
+                        compact: narrow,
+                      )
+                    else if (shieldStock > 0)
+                      _HudPill(
+                        label: 'Double-tap',
+                        value: 'Shield ×$shieldStock',
+                        icon: Icons.shield_outlined,
                         compact: narrow,
                       ),
                     if (magnetRemaining > 0)

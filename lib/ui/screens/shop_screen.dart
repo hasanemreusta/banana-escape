@@ -277,12 +277,13 @@ class _ShopScreenState extends State<ShopScreen> {
         const SizedBox(height: 8),
         const _SectionLabel(
           title: 'ITEMS',
-          subtitle: 'Spent one crash at a time.',
+          subtitle: 'Yours to raise when it counts.',
         ),
         ShopItemCard(
           icon: Icons.shield_rounded,
           title: 'Peel Shield',
-          description: 'Absorbs one crash per run. Used automatically.',
+          description:
+              'Double-tap in a run to raise it for 5s. Absorbs one crash.',
           detail: '${profile.shieldCount}/${Shop.maxShields} held',
           filled: profile.shieldCount,
           total: Shop.maxShields,
