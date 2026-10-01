@@ -23,7 +23,7 @@ You are a banana. A blender truck wants you. Swipe or die trying.
 
 | Main menu | Gameplay | Run summary |
 |---|---|---|
-| <img src="assets/screenshots/menu.png" width="240" alt="Main menu"> | <img src="assets/screenshots/gameplay-day.png" width="240" alt="Gameplay at noon"> | <img src="assets/screenshots/game-over.png" width="240" alt="Run summary"> |
+| <img src="assets/screenshots/menu.png" width="240" alt="Main menu"> | <img src="assets/screenshots/gameplay-day.png" width="240" alt="Gameplay with a raised shield"> | <img src="assets/screenshots/game-over.png" width="240" alt="Run summary"> |
 
 The same run at three points of the day/night cycle — sky, ground, ridges, palms
 and road all shift palette together, and stars fade in as it darkens:
@@ -32,14 +32,15 @@ and road all shift palette together, and stars fade in as it darkens:
 |---|---|---|
 | <img src="assets/screenshots/gameplay-day.png" width="240" alt="Noon palette"> | <img src="assets/screenshots/gameplay-sunset.png" width="240" alt="Sunset palette"> | <img src="assets/screenshots/gameplay-night.png" width="240" alt="Night palette"> |
 
-<img src="assets/screenshots/meta.png" width="240" alt="Daily reward, skins and missions" align="right">
+| Upgrades | Skins | Daily bunch |
+|---|---|---|
+| <img src="assets/screenshots/shop-upgrades.png" width="240" alt="Shop upgrades and shield"> | <img src="assets/screenshots/shop-skins.png" width="240" alt="Shop skins in rarity tiers"> | <img src="assets/screenshots/daily-reward.png" width="240" alt="Seven-day login streak"> |
 
-The meta layer: a seven-day login streak with an escalating reward table, eight
-skins in rarity tiers, and three missions that persist across runs. Every banana
-in the closet is the same code-drawn character with a different palette — adding
-a skin is a colour table entry, not an art export.
-
-<br clear="all">
+The meta layer: a seven-day login streak with an escalating reward table, a shop
+with permanent upgrades and double-tap shields, eight skins in rarity tiers, and
+three missions that persist across runs. Every banana in the closet is the same
+code-drawn character with a different palette — adding a skin is a colour table
+entry, not an art export.
 
 ## What it is
 
