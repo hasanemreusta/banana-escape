@@ -1,10 +1,12 @@
+import 'package:banana_escape/l10n/strings.dart';
+
 class AppCopy {
   const AppCopy._();
 
   static const String gameTitle = 'Banana Escape';
-  static const String menuTagline = 'Run, Banana, Run!';
-  static const String menuSubtitle = 'Too ripe to quit!';
-  static const String onboarding = 'Swipe to dodge  •  Collect bananas  •  Don\'t get blended';
-  static const String dangerBanner = 'Blender is coming!';
-  static const String retryCta = 'One more run?';
+  static String get menuTagline => S.current.menuTagline;
+  static String get menuSubtitle => S.current.menuSubtitle;
+  static String get onboarding => S.current.onboarding;
+  static String get dangerBanner => S.current.dangerBanner;
+  static String get retryCta => S.current.retryCta;
 }

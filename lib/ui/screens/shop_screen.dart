@@ -1,3 +1,4 @@
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:banana_escape/config/app_colors.dart';
 import 'package:banana_escape/models/game_profile.dart';
 import 'package:banana_escape/models/shop_overview.dart';
@@ -85,25 +86,27 @@ class _ShopScreenState extends State<ShopScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         title: Text(
-          'Buy $itemName?',
+          S.current.confirmBuy(itemName),
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         content: Text(
-          'This spends ${formatCoins(cost)} of your '
-          '${formatCoins(profile.totalCoins)} coins.',
+          S.current.confirmSpend(
+            formatCoins(cost),
+            formatCoins(profile.totalCoins),
+          ),
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Not yet'),
+            child: Text(S.current.notYet),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(backgroundColor: AppColors.orange),
-            child: const Text(
-              'Buy it',
-              style: TextStyle(fontWeight: FontWeight.w900),
+            child: Text(
+              S.current.buyIt,
+              style: const TextStyle(fontWeight: FontWeight.w900),
             ),
           ),
         ],
@@ -124,7 +127,7 @@ class _ShopScreenState extends State<ShopScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'NEW SKIN!',
+                S.current.newSkin,
                 style: TextStyle(
                   fontSize: 14,
                   letterSpacing: 2,
@@ -157,9 +160,9 @@ class _ShopScreenState extends State<ShopScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Equipped — let\'s run!',
-                    style: TextStyle(fontWeight: FontWeight.w900),
+                  child: Text(
+                    S.current.equippedRun,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
               ),
@@ -201,10 +204,10 @@ class _ShopScreenState extends State<ShopScreen> {
                         color: AppColors.ink,
                       ),
                       const SizedBox(width: 4),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Shop',
-                          style: TextStyle(
+                          S.current.shopTitle,
+                          style: const TextStyle(
                             fontSize: 30,
                             fontWeight: FontWeight.w900,
                             color: AppColors.ink,
@@ -232,15 +235,15 @@ class _ShopScreenState extends State<ShopScreen> {
                     labelColor: Colors.white,
                     unselectedLabelColor: AppColors.ink,
                     labelStyle: const TextStyle(fontWeight: FontWeight.w900),
-                    tabs: const [
+                    tabs: [
                       Tab(
-                        icon: Icon(Icons.bolt_rounded, size: 20),
-                        text: 'Upgrades',
+                        icon: const Icon(Icons.bolt_rounded, size: 20),
+                        text: S.current.tabUpgrades,
                         iconMargin: EdgeInsets.zero,
                       ),
                       Tab(
-                        icon: Icon(Icons.checkroom_rounded, size: 20),
-                        text: 'Skins',
+                        icon: const Icon(Icons.checkroom_rounded, size: 20),
+                        text: S.current.tabSkins,
                         iconMargin: EdgeInsets.zero,
                       ),
                     ],
@@ -266,33 +269,32 @@ class _ShopScreenState extends State<ShopScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
       children: [
-        const _SectionLabel(
-          title: 'POWER-UPS',
-          subtitle: 'Permanent. Every run, forever.',
+        _SectionLabel(
+          title: S.current.powerUps,
+          subtitle: S.current.powerUpsSubtitle,
         ),
         for (final upgrade in Upgrades.all) ...[
           _upgradeCard(upgrade),
           const SizedBox(height: 12),
         ],
         const SizedBox(height: 8),
-        const _SectionLabel(
-          title: 'ITEMS',
-          subtitle: 'Yours to raise when it counts.',
+        _SectionLabel(
+          title: S.current.items,
+          subtitle: S.current.itemsSubtitle,
         ),
         ShopItemCard(
           icon: Icons.shield_rounded,
-          title: 'Peel Shield',
-          description:
-              'Double-tap in a run to raise it for 5s. Absorbs one crash.',
-          detail: '${profile.shieldCount}/${Shop.maxShields} held',
+          title: S.current.shieldTitle,
+          description: S.current.shieldDescription,
+          detail: S.current.shieldHeld(profile.shieldCount, Shop.maxShields),
           filled: profile.shieldCount,
           total: Shop.maxShields,
           price: profile.shieldCount < Shop.maxShields ? Shop.shieldCost : null,
           affordable: profile.canBuyShield,
-          maxedLabel: 'Full',
+          maxedLabel: S.current.full,
           onPressed: () => _purchase(
             cost: Shop.shieldCost,
-            itemName: 'a Peel Shield',
+            itemName: S.current.itemShield,
             action: _actions.buyShield,
           ),
         ),
@@ -317,7 +319,7 @@ class _ShopScreenState extends State<ShopScreen> {
       affordable: profile.canBuyUpgrade(upgrade),
       onPressed: () => _purchase(
         cost: cost ?? 0,
-        itemName: '${upgrade.title} level ${level + 1}',
+        itemName: S.current.upgradeLevelName(upgrade.title, level + 1),
         action: () => _actions.buyUpgrade(upgrade),
       ),
     );
@@ -416,7 +418,7 @@ class RarityChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        rarity.label.toUpperCase(),
+        S.current.upper(rarity.label),
         style: const TextStyle(
           fontSize: 11,
           letterSpacing: 1.2,
@@ -453,21 +455,21 @@ class _SkinSpotlight extends StatelessWidget {
     final Widget action;
     if (equipped) {
       action = _SpotlightButton(
-        label: 'Equipped',
+        label: S.current.equipped,
         icon: Icons.check_rounded,
         color: AppColors.leafDeep,
         onPressed: null,
       );
     } else if (owned) {
       action = _SpotlightButton(
-        label: 'Equip',
+        label: S.current.equip,
         icon: Icons.checkroom_rounded,
         color: AppColors.ink,
         onPressed: onEquip,
       );
     } else if (affordable) {
       action = _SpotlightButton(
-        label: 'Unlock · ${formatCoins(skin.cost)}',
+        label: S.current.unlockFor(formatCoins(skin.cost)),
         icon: Icons.monetization_on_rounded,
         color: AppColors.orange,
         onPressed: onBuy,
@@ -493,7 +495,7 @@ class _SkinSpotlight extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '${formatCoins(missing)} more coins to unlock',
+            S.current.coinsToUnlock(formatCoins(missing)),
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
@@ -669,7 +671,7 @@ class _SkinTile extends StatelessWidget {
             const SizedBox(height: 2),
             if (owned)
               Text(
-                equipped ? 'Equipped' : 'Owned',
+                equipped ? S.current.equipped : S.current.owned,
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,

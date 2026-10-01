@@ -1,3 +1,4 @@
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:banana_escape/config/app_colors.dart';
 import 'package:banana_escape/ui/format.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +18,7 @@ class ShopItemCard extends StatelessWidget {
     required this.price,
     required this.affordable,
     required this.onPressed,
-    this.maxedLabel = 'Maxed',
+    this.maxedLabel,
   });
 
   final IconData icon;
@@ -33,7 +34,8 @@ class ShopItemCard extends StatelessWidget {
   final int? price;
   final bool affordable;
   final VoidCallback onPressed;
-  final String maxedLabel;
+  /// Shown once maxed; defaults to the generic "Maxed".
+  final String? maxedLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +139,7 @@ class ShopItemCard extends StatelessWidget {
             ),
             child: maxed
                 ? Text(
-                    maxedLabel,
+                    maxedLabel ?? S.current.maxed,
                     style: const TextStyle(fontWeight: FontWeight.w900),
                   )
                 : Row(

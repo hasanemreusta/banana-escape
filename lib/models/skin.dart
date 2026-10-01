@@ -1,24 +1,25 @@
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:flutter/material.dart';
 
 /// How hard a skin is to get. Drives its price band and the colour it is
 /// framed in across the shop, so rarity reads before the price does.
 enum SkinRarity {
-  standard('Standard', Color(0xFF9A93A0)),
-  common('Common', Color(0xFF4FB477)),
-  rare('Rare', Color(0xFF3E8EDE)),
-  epic('Epic', Color(0xFF9B59D6)),
-  legendary('Legendary', Color(0xFFF2A100));
+  standard(Color(0xFF9A93A0)),
+  common(Color(0xFF4FB477)),
+  rare(Color(0xFF3E8EDE)),
+  epic(Color(0xFF9B59D6)),
+  legendary(Color(0xFFF2A100));
 
-  const SkinRarity(this.label, this.color);
+  const SkinRarity(this.color);
 
-  final String label;
   final Color color;
+
+  String get label => S.current.rarityLabel(name);
 }
 
 class BananaSkin {
   const BananaSkin({
     required this.id,
-    required this.name,
     required this.cost,
     required this.isDefault,
     required this.primaryColor,
@@ -30,7 +31,7 @@ class BananaSkin {
 
   /// Storage key. Never rename one that has shipped — ownership is saved by it.
   final String id;
-  final String name;
+  String get name => S.current.skinName(id);
   final int cost;
   final bool isDefault;
   final Color primaryColor;
@@ -49,7 +50,6 @@ class BananaSkins {
 
   static const BananaSkin defaultSkin = BananaSkin(
     id: defaultId,
-    name: 'Classic Peel',
     cost: 0,
     isDefault: true,
     primaryColor: Color(0xFFFFD447),
@@ -61,7 +61,6 @@ class BananaSkins {
 
   static const BananaSkin mintChip = BananaSkin(
     id: 'mint_chip',
-    name: 'Mint Chip',
     cost: 1500,
     isDefault: false,
     primaryColor: Color(0xFFB8F1A5),
@@ -73,7 +72,6 @@ class BananaSkins {
 
   static const BananaSkin berryPop = BananaSkin(
     id: 'berry_pop',
-    name: 'Berry Pop',
     cost: 3000,
     isDefault: false,
     primaryColor: Color(0xFFFF8AC6),
@@ -85,7 +83,6 @@ class BananaSkins {
 
   static const BananaSkin chocoDip = BananaSkin(
     id: 'choco_dip',
-    name: 'Choco Dip',
     cost: 6000,
     isDefault: false,
     primaryColor: Color(0xFFB27A4E),
@@ -97,7 +94,6 @@ class BananaSkins {
 
   static const BananaSkin galaxyPeel = BananaSkin(
     id: 'galaxy_peel',
-    name: 'Galaxy Peel',
     cost: 12000,
     isDefault: false,
     primaryColor: Color(0xFF8EA4FF),
@@ -109,7 +105,6 @@ class BananaSkins {
 
   static const BananaSkin lavaPeel = BananaSkin(
     id: 'lava_peel',
-    name: 'Lava Peel',
     cost: 20000,
     isDefault: false,
     primaryColor: Color(0xFFFF7A45),
@@ -121,7 +116,6 @@ class BananaSkins {
 
   static const BananaSkin frostBite = BananaSkin(
     id: 'frost_bite',
-    name: 'Frost Bite',
     cost: 28000,
     isDefault: false,
     primaryColor: Color(0xFFD6F4FF),
@@ -133,7 +127,6 @@ class BananaSkins {
 
   static const BananaSkin goldenBanana = BananaSkin(
     id: 'golden_banana',
-    name: 'Golden Banana',
     cost: 50000,
     isDefault: false,
     primaryColor: Color(0xFFFFD86B),

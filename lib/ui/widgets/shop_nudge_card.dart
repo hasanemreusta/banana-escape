@@ -1,3 +1,4 @@
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:banana_escape/config/app_colors.dart';
 import 'package:banana_escape/models/shop_overview.dart';
 import 'package:banana_escape/ui/format.dart';
@@ -34,12 +35,12 @@ class ShopNudgeCard extends StatelessWidget {
     final String detail;
     if (canBuy) {
       headline = overview.affordableCount == 1
-          ? '1 item ready to buy'
-          : '${overview.affordableCount} items ready to buy';
-      detail = 'Your coins are burning a hole in your peel.';
+          ? S.current.oneItemReady
+          : S.current.itemsReady(overview.affordableCount);
+      detail = S.current.nudgeDetail;
     } else {
-      headline = 'Saving for ${goal!.title}';
-      detail = '${formatCoins(goal.cost - coins)} coins to go';
+      headline = S.current.savingFor(goal!.title);
+      detail = S.current.coinsToGo(formatCoins(goal.cost - coins));
     }
 
     return Material(

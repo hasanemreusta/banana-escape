@@ -1,3 +1,4 @@
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:banana_escape/models/game_profile.dart';
 import 'package:banana_escape/models/skin.dart';
 import 'package:banana_escape/models/upgrade.dart';
@@ -52,8 +53,8 @@ class ShopOverview {
   static List<ShopOffer> offersFor(GameProfile profile) {
     return [
       if (profile.shieldCount == 0)
-        const ShopOffer(
-          title: 'Peel Shield',
+        ShopOffer(
+          title: S.current.shieldTitle,
           cost: Shop.shieldCost,
           tab: ShopTab.upgrades,
         ),
@@ -61,7 +62,10 @@ class ShopOverview {
         if (upgrade.costToUpgradeFrom(profile.upgradeLevel(upgrade))
             case final cost?)
           ShopOffer(
-            title: '${upgrade.title} Lv ${profile.upgradeLevel(upgrade) + 1}',
+            title: S.current.upgradeShortLevel(
+              upgrade.title,
+              profile.upgradeLevel(upgrade) + 1,
+            ),
             cost: cost,
             tab: ShopTab.upgrades,
           ),

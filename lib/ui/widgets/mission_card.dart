@@ -1,3 +1,4 @@
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:banana_escape/config/app_colors.dart';
 import 'package:banana_escape/models/mission.dart';
 import 'package:flutter/material.dart';
@@ -56,7 +57,7 @@ class MissionCard extends StatelessWidget {
                 ),
               ),
               Text(
-                mission.isComplete ? 'Done' : '$progress/${mission.definition.target}',
+                mission.isComplete ? S.current.missionDone : '$progress/${mission.definition.target}',
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   color: mission.isComplete ? AppColors.leafGreen : AppColors.softInk,

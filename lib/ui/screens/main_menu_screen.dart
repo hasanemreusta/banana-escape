@@ -1,3 +1,4 @@
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:banana_escape/config/app_colors.dart';
 import 'package:banana_escape/config/app_copy.dart';
 import 'package:banana_escape/models/game_profile.dart';
@@ -101,8 +102,8 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
       return;
     }
     await _showSheet(
-      title: 'Daily Bunch',
-      subtitle: 'Come back every day — the reward grows with your streak.',
+      title: S.current.dailyBunch,
+      subtitle: S.current.dailyBunchSubtitle,
       child: DailyRewardCard(
         state: profile.dailyRewardState,
         now: DateTime.now(),
@@ -124,7 +125,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
       return;
     }
     Navigator.of(context).pop();
-    _showMessage('Daily bunch collected: +${formatCoins(reward)} coins');
+    _showMessage(S.current.dailyCollected(formatCoins(reward)));
   }
 
   Future<void> _openMissions() async {
@@ -133,8 +134,8 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
       return;
     }
     await _showSheet(
-      title: 'Missions',
-      subtitle: 'Short goals that add a bit of "one more run".',
+      title: S.current.missions,
+      subtitle: S.current.missionsSubtitle,
       child: Column(
         children: [
           for (final mission in profile.missionViews) ...[
@@ -265,9 +266,9 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       AppCopy.menuTagline,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
                         color: AppColors.orange,
@@ -307,10 +308,10 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                     const SizedBox(height: 12),
                     _PlayButton(onPressed: _startGame),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       AppCopy.onboarding,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.softInk,
                         fontWeight: FontWeight.w800,
@@ -321,7 +322,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                       children: [
                         _NavTile(
                           icon: Icons.storefront_rounded,
-                          label: 'Shop',
+                          label: S.current.shop,
                           color: AppColors.orange,
                           badge: shopOverview.affordableCount > 0
                               ? '${shopOverview.affordableCount}'
@@ -330,13 +331,13 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         ),
                         _NavTile(
                           icon: Icons.checkroom_rounded,
-                          label: 'Skins',
+                          label: S.current.skins,
                           color: const Color(0xFF9B59D6),
                           onTap: () => _openShop(ShopTab.skins),
                         ),
                         _NavTile(
                           icon: Icons.flag_rounded,
-                          label: 'Missions',
+                          label: S.current.missions,
                           color: AppColors.ocean,
                           badge: '$missionsDone/${profile.missionViews.length}',
                           badgeColor: AppColors.ink,
@@ -344,7 +345,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         ),
                         _NavTile(
                           icon: Icons.card_giftcard_rounded,
-                          label: 'Daily',
+                          label: S.current.daily,
                           color: AppColors.leafDeep,
                           badge: dailyReady ? '!' : null,
                           onTap: _openDaily,
@@ -529,14 +530,14 @@ class _PlayButtonState extends State<_PlayButton>
                 borderRadius: BorderRadius.circular(22),
               ),
             ),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.play_arrow_rounded, size: 34),
-                SizedBox(width: 6),
+                const Icon(Icons.play_arrow_rounded, size: 34),
+                const SizedBox(width: 6),
                 Text(
-                  'PLAY',
-                  style: TextStyle(
+                  S.current.play,
+                  style: const TextStyle(
                     fontSize: 24,
                     letterSpacing: 2,
                     fontWeight: FontWeight.w900,
@@ -584,8 +585,8 @@ class _LoadoutStrip extends StatelessWidget {
           Expanded(
             child: Text(
               hasShield
-                  ? 'Shields ×$shieldCount · double-tap in a run'
-                  : 'No shields — grab one for tough runs',
+                  ? S.current.shieldsHeld(shieldCount)
+                  : S.current.noShields,
               style: const TextStyle(
                 fontWeight: FontWeight.w900,
                 color: AppColors.ink,

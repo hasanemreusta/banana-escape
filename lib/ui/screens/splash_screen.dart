@@ -1,3 +1,4 @@
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:banana_escape/config/app_colors.dart';
 import 'package:banana_escape/config/app_copy.dart';
 import 'package:banana_escape/services/app_services.dart';
@@ -76,9 +77,9 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Peel out before the blender catches up.',
-                style: TextStyle(
+              Text(
+                S.current.splashTagline,
+                style: const TextStyle(
                   fontSize: 15,
                   color: AppColors.softInk,
                   fontWeight: FontWeight.w700,

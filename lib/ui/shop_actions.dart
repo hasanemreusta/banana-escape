@@ -1,3 +1,4 @@
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:banana_escape/models/skin.dart';
 import 'package:banana_escape/models/upgrade.dart';
 import 'package:banana_escape/services/app_services.dart';
@@ -25,15 +26,15 @@ class ShopActions {
     await services.audio.playButton();
     final current = services.profile;
     if (current.shieldCount >= Shop.maxShields) {
-      return const PurchaseOutcome(
-        'Shield rack is full — ${Shop.maxShields} at most.',
+      return PurchaseOutcome(
+        S.current.shieldRackFull(Shop.maxShields),
       );
     }
     if (!current.canBuyShield) {
       return _short(Shop.shieldCost - current.totalCoins);
     }
     await services.saveProfile(current.buyShield());
-    return _bought('Shield added. Double-tap during a run to raise it.');
+    return _bought(S.current.shieldAdded);
   }
 
   Future<PurchaseOutcome> buyUpgrade(UpgradeDefinition upgrade) async {
@@ -42,23 +43,23 @@ class ShopActions {
     final level = current.upgradeLevel(upgrade);
     final cost = upgrade.costToUpgradeFrom(level);
     if (cost == null) {
-      return PurchaseOutcome('${upgrade.title} is already maxed.');
+      return PurchaseOutcome(S.current.upgradeMaxed(upgrade.title));
     }
     if (!current.canBuyUpgrade(upgrade)) {
       return _short(cost - current.totalCoins);
     }
     await services.saveProfile(current.buyUpgrade(upgrade));
-    return _bought('${upgrade.title} is now level ${level + 1}!');
+    return _bought(S.current.upgradeNowLevel(upgrade.title, level + 1));
   }
 
   Future<PurchaseOutcome> equipSkin(BananaSkin skin) async {
     await services.audio.playButton();
     final current = services.profile;
     if (!skin.isOwned(current.ownedSkinIds)) {
-      return PurchaseOutcome('${skin.name} is still locked.');
+      return PurchaseOutcome(S.current.skinLocked(skin.name));
     }
     await services.saveProfile(current.equipSkin(skin.id));
-    return PurchaseOutcome('${skin.name} equipped.');
+    return PurchaseOutcome(S.current.skinEquipped(skin.name));
   }
 
   /// Unlocks and equips [skin].
@@ -66,17 +67,17 @@ class ShopActions {
     await services.audio.playButton();
     final current = services.profile;
     if (skin.isOwned(current.ownedSkinIds)) {
-      return PurchaseOutcome('You already own ${skin.name}.');
+      return PurchaseOutcome(S.current.skinAlreadyOwned(skin.name));
     }
     if (!current.canUnlockSkin(skin)) {
       return _short(skin.cost - current.totalCoins);
     }
     await services.saveProfile(current.unlockSkin(skin));
-    return _bought('${skin.name} unlocked!');
+    return _bought(S.current.skinUnlocked(skin.name));
   }
 
   PurchaseOutcome _short(int missing) =>
-      PurchaseOutcome('Need ${formatCoins(missing)} more coins.');
+      PurchaseOutcome(S.current.needMoreCoins(formatCoins(missing)));
 
   PurchaseOutcome _bought(String message) {
     HapticFeedback.mediumImpact();

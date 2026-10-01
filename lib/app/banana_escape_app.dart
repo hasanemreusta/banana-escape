@@ -1,6 +1,7 @@
 import 'package:banana_escape/config/app_colors.dart';
 import 'package:banana_escape/ui/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 class BananaEscapeApp extends StatelessWidget {
   const BananaEscapeApp({super.key});
@@ -25,6 +26,10 @@ class BananaEscapeApp extends StatelessWidget {
     return MaterialApp(
       title: 'Banana Escape',
       debugShowCheckedModeBanner: false,
+      // The game's own text comes from S; these cover the framework's strings
+      // (back-button tooltips, dialog semantics) in the same two languages.
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: const [Locale('en'), Locale('tr')],
       theme: base.copyWith(
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,

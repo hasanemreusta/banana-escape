@@ -1,3 +1,4 @@
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:banana_escape/config/app_colors.dart';
 import 'package:banana_escape/models/daily_reward.dart';
 import 'package:flutter/material.dart';
@@ -59,7 +60,7 @@ class DailyRewardCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Daily Bunch',
+                      S.current.dailyBunch,
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
@@ -68,8 +69,8 @@ class DailyRewardCard extends StatelessWidget {
                     ),
                     Text(
                       claimable
-                          ? 'Day $pendingDay reward: $reward coins'
-                          : 'Collected. Come back tomorrow.',
+                          ? S.current.dailyDayReward(pendingDay, reward)
+                          : S.current.dailyCollectedTomorrow,
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: claimable
@@ -115,7 +116,9 @@ class DailyRewardCard extends StatelessWidget {
                 ),
               ),
               child: Text(
-                claimable ? 'Claim $reward coins' : 'Already claimed today',
+                claimable
+                    ? S.current.dailyClaim(reward)
+                    : S.current.dailyAlreadyClaimed,
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:banana_escape/config/app_colors.dart';
 import 'package:banana_escape/config/game_config.dart';
 import 'package:banana_escape/core/game_session_result.dart';
@@ -428,25 +429,25 @@ class _HudOverlay extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     _HudPill(
-                      label: 'Score',
+                      label: S.current.hudScore,
                       value: '$score',
                       icon: Icons.bolt_rounded,
                       compact: narrow,
                     ),
                     _HudPill(
-                      label: 'Meters',
+                      label: S.current.hudMeters,
                       value: '$distance',
                       icon: Icons.route_rounded,
                       compact: narrow,
                     ),
                     _HudPill(
-                      label: 'Coins',
+                      label: S.current.hudCoins,
                       value: '$coins',
                       icon: Icons.monetization_on_rounded,
                       compact: narrow,
                     ),
                     _HudPill(
-                      label: 'Stage',
+                      label: S.current.hudStage,
                       value: '$stage',
                       icon: Icons.whatshot_rounded,
                       compact: true,
@@ -460,7 +461,7 @@ class _HudOverlay extends StatelessWidget {
                   children: [
                     if (comboMultiplier > 1)
                       _HudPill(
-                        label: 'Combo',
+                        label: S.current.hudCombo,
                         value: 'x$comboMultiplier',
                         accent: AppColors.panelAlt,
                         icon: Icons.local_fire_department_rounded,
@@ -468,23 +469,25 @@ class _HudOverlay extends StatelessWidget {
                       ),
                     if (shieldRemaining > 0)
                       _HudPill(
-                        label: 'Shield',
-                        value: '${shieldRemaining.toStringAsFixed(1)}s',
+                        label: S.current.hudShield,
+                        value:
+                            '${shieldRemaining.toStringAsFixed(1)}${S.current.secondsUnit}',
                         accent: AppColors.mint,
                         icon: Icons.shield_rounded,
                         compact: narrow,
                       )
                     else if (shieldStock > 0)
                       _HudPill(
-                        label: 'Double-tap',
-                        value: 'Shield ×$shieldStock',
+                        label: S.current.hudDoubleTap,
+                        value: S.current.shieldStock(shieldStock),
                         icon: Icons.shield_outlined,
                         compact: narrow,
                       ),
                     if (magnetRemaining > 0)
                       _HudPill(
-                        label: 'Magnet',
-                        value: '${magnetRemaining.toStringAsFixed(1)}s',
+                        label: S.current.hudMagnet,
+                        value:
+                            '${magnetRemaining.toStringAsFixed(1)}${S.current.secondsUnit}',
                         accent: AppColors.mint,
                         icon: Icons.auto_fix_high_rounded,
                         compact: narrow,
@@ -618,12 +621,16 @@ class _PauseOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _OverlayPanel(
-      title: 'Paused',
-      subtitle: 'Catch your breath. The blender is still lurking.',
+      title: S.current.pausedTitle,
+      subtitle: S.current.pausedSubtitle,
       actions: [
-        _ActionButton(label: 'Continue', onPressed: onResume, primary: true),
-        _ActionButton(label: 'Restart', onPressed: onRestart),
-        _ActionButton(label: 'Main Menu', onPressed: onMenu),
+        _ActionButton(
+          label: S.current.resume,
+          onPressed: onResume,
+          primary: true,
+        ),
+        _ActionButton(label: S.current.restart, onPressed: onRestart),
+        _ActionButton(label: S.current.mainMenu, onPressed: onMenu),
       ],
     );
   }
@@ -682,22 +689,22 @@ class _ReviveOverlayState extends State<_ReviveOverlay>
   @override
   Widget build(BuildContext context) {
     return _OverlayPanel(
-      title: 'So close!',
-      subtitle: 'Spend coins to shake off the blender and keep this run going.',
+      title: S.current.continueTitle,
+      subtitle: S.current.continueSubtitle,
       extra: Column(
         children: [
           Row(
             children: [
               Expanded(
                 child: _ResultTile(
-                  label: 'Your coins',
+                  label: S.current.yourCoins,
                   value: formatCoins(widget.bank),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _ResultTile(
-                  label: 'This run',
+                  label: S.current.thisRun,
                   value: '+${widget.runCoins}',
                 ),
               ),
@@ -725,7 +732,7 @@ class _ReviveOverlayState extends State<_ReviveOverlay>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Run ends in ${left}s',
+                    S.current.runEndsIn(left),
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
@@ -740,11 +747,14 @@ class _ReviveOverlayState extends State<_ReviveOverlay>
       ),
       actions: [
         _ActionButton(
-          label: 'Continue for ${formatCoins(widget.cost)} coins',
+          label: S.current.continueFor(formatCoins(widget.cost)),
           onPressed: _revive,
           primary: true,
         ),
-        _ActionButton(label: 'No thanks', onPressed: widget.onDecline),
+        _ActionButton(
+          label: S.current.noThanks,
+          onPressed: widget.onDecline,
+        ),
       ],
     );
   }
@@ -772,8 +782,8 @@ class _GameOverOverlay extends StatelessWidget {
     final openMissions =
         profile.missionViews.where((mission) => !mission.isComplete).toList();
     return _OverlayPanel(
-      title: 'Blended!',
-      subtitle: 'Too ripe to quit. Hit retry and beat that run.',
+      title: S.current.blendedTitle,
+      subtitle: S.current.blendedSubtitle,
       extra: Column(
         children: [
           if (isNewBest) ...[
@@ -785,9 +795,9 @@ class _GameOverOverlay extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: const Text(
-                'New Best!',
-                style: TextStyle(
+              child: Text(
+                S.current.newBest,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
                 ),
@@ -799,14 +809,14 @@ class _GameOverOverlay extends StatelessWidget {
             children: [
               Expanded(
                 child: _ResultTile(
-                  label: 'Run Score',
+                  label: S.current.runScore,
                   value: '${result.score}',
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _ResultTile(
-                  label: 'Best',
+                  label: S.current.best,
                   value: '${profile.highScore}',
                 ),
               ),
@@ -817,14 +827,14 @@ class _GameOverOverlay extends StatelessWidget {
             children: [
               Expanded(
                 child: _ResultTile(
-                  label: 'Coins',
+                  label: S.current.hudCoins,
                   value: '+${result.coinsCollected}',
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _ResultTile(
-                  label: 'Distance',
+                  label: S.current.distance,
                   value: '${result.distance}m',
                 ),
               ),
@@ -842,7 +852,7 @@ class _GameOverOverlay extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Mission Progress',
+                S.current.missionProgress,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w900,
                       color: AppColors.ink,
@@ -888,8 +898,12 @@ class _GameOverOverlay extends StatelessWidget {
         ],
       ),
       actions: [
-        _ActionButton(label: 'Retry', onPressed: onRetry, primary: true),
-        _ActionButton(label: 'Main Menu', onPressed: onMenu),
+        _ActionButton(
+          label: S.current.retry,
+          onPressed: onRetry,
+          primary: true,
+        ),
+        _ActionButton(label: S.current.mainMenu, onPressed: onMenu),
       ],
     );
   }

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:banana_escape/config/app_copy.dart';
 import 'package:banana_escape/config/app_colors.dart';
 import 'package:banana_escape/config/game_config.dart';
@@ -187,14 +188,14 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
       _invulnerableRemaining = math.max(0, _invulnerableRemaining - dt);
     }
     if (_shields.tick(dt)) {
-      _statusText = 'Shield faded';
+      _statusText = S.current.statusShieldFaded;
       _statusRemaining = 0.9;
     }
     // Once per run, a beat after the start, remind a player carrying shields
     // how to use them.
     if (!_shieldHintShown && runTime > 1.2 && _shields.stock > 0) {
       _shieldHintShown = true;
-      _statusText = 'Double-tap to raise a shield';
+      _statusText = S.current.statusDoubleTapHint;
       _statusRemaining = 2.2;
     }
     if (_comboRemaining > 0) {
@@ -248,7 +249,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
         GameConfig.collectibleIntervalMin,
         collectibleInterval - 0.01,
       );
-      _statusText = 'Stage $stage Rush!';
+      _statusText = S.current.statusStageRush(stage);
       _statusRemaining = 1.8;
       add(
         FeedbackBurstComponent(
@@ -370,7 +371,8 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
         obstacle.nearMissAwarded = true;
         player.triggerNearMiss();
         styleBonus += GameConfig.nearMissScoreBonus;
-        _statusText = 'Close one! +${GameConfig.nearMissScoreBonus}';
+        _statusText =
+            S.current.statusCloseOne(GameConfig.nearMissScoreBonus);
         _statusRemaining = 0.55;
         add(
           FeedbackBurstComponent(
@@ -424,7 +426,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
     _comboRemaining = loadout.comboWindow;
     final multiplier = comboMultiplier;
     if (multiplier > previousMultiplier) {
-      _statusText = 'Combo x$multiplier!';
+      _statusText = S.current.statusCombo(multiplier);
       _statusRemaining = 1.2;
       add(
         FeedbackBurstComponent(
@@ -454,7 +456,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
       case CollectibleType.combo:
         {
           coins += loadout.comboCoinValue.toInt() * multiplier;
-          _statusText = 'Combo Banana!';
+          _statusText = S.current.statusComboBanana;
           _statusRemaining = 1.4;
           add(
             FeedbackBurstComponent(
@@ -470,7 +472,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
       case CollectibleType.magnet:
         {
           _magnetRemaining = loadout.magnetDuration;
-          _statusText = 'Magnet mode!';
+          _statusText = S.current.statusMagnet;
           _statusRemaining = 1.4;
           add(
             FeedbackBurstComponent(
@@ -554,7 +556,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
     if (_ended || !isReady || !_shields.activate()) {
       return false;
     }
-    _statusText = 'Shield up!';
+    _statusText = S.current.statusShieldUp;
     _statusRemaining = 1.0;
     final player = _player!;
     add(
@@ -573,7 +575,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
 
   void _breakShield(ObstacleComponent obstacle) {
     _invulnerableRemaining = shieldGraceDuration;
-    _statusText = 'Shield saved you!';
+    _statusText = S.current.statusShieldSaved;
     _statusRemaining = 1.4;
     add(
       FeedbackBurstComponent(
@@ -600,7 +602,7 @@ class BananaEscapeGame extends FlameGame implements SpawnHost {
     revivesUsed += 1;
     _ended = false;
     _invulnerableRemaining = reviveGraceDuration;
-    _statusText = 'Back in the race!';
+    _statusText = S.current.statusRevived;
     _statusRemaining = 1.4;
     resumeEngine();
   }

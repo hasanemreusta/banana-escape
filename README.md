@@ -90,6 +90,7 @@ lib/
   app/            MaterialApp shell and theme
   config/         Tunable constants — balance lives here, not scattered in logic
   core/           Value types crossing the game/UI boundary
+  l10n/           Every player-facing string, in English and Turkish
   game/
     components/   Flame components: player, obstacles, collectibles, background, truck
     data/         Enums and palettes: obstacle types, player moods, sky palettes
@@ -107,6 +108,12 @@ Two boundaries are worth calling out:
 `GameSessionResult` when a run ends; `GameProfile.applySession` folds that into
 the saved profile. The simulation stays testable without mocking
 `SharedPreferences`.
+
+**Text follows the device language.** `S.current` in [`lib/l10n/strings.dart`]
+(lib/l10n/strings.dart) resolves to English or Turkish from the system locale. It is a
+plain abstract class rather than ARB files, so the compiler rejects a translation
+that misses a string and the Flame game and models can read it without a
+`BuildContext`.
 
 **Balance is data, not code.** Scroll speed, acceleration, spawn intervals,
 hitbox factors, combo windows, and collision-forgiveness thresholds all live in

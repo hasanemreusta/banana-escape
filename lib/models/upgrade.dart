@@ -1,4 +1,5 @@
 import 'package:banana_escape/config/game_config.dart';
+import 'package:banana_escape/l10n/strings.dart';
 import 'package:flutter/material.dart';
 
 enum UpgradeType {
@@ -11,8 +12,6 @@ class UpgradeDefinition {
   const UpgradeDefinition({
     required this.type,
     required this.id,
-    required this.title,
-    required this.description,
     required this.icon,
     required this.baseValue,
     required this.valuePerLevel,
@@ -24,12 +23,13 @@ class UpgradeDefinition {
   /// Storage key. Never rename one that has shipped — saved levels are keyed
   /// by it.
   final String id;
-  final String title;
-  final String description;
   final IconData icon;
   final double baseValue;
   final double valuePerLevel;
   final String unit;
+
+  String get title => S.current.upgradeTitle(id);
+  String get description => S.current.upgradeDescription(id);
 
   static const int maxLevel = 5;
 
@@ -53,7 +53,8 @@ class UpgradeDefinition {
     final text = value == value.roundToDouble()
         ? value.toStringAsFixed(0)
         : value.toStringAsFixed(1);
-    return '$text$unit';
+    final suffix = unit == 's' ? S.current.secondsUnit : unit;
+    return '$text$suffix';
   }
 }
 
@@ -63,8 +64,6 @@ class Upgrades {
   static const UpgradeDefinition magnet = UpgradeDefinition(
     type: UpgradeType.magnet,
     id: 'magnet_duration',
-    title: 'Longer Magnet',
-    description: 'Magnet pickups pull coins for longer.',
     icon: Icons.auto_fix_high_rounded,
     baseValue: GameConfig.magnetDuration,
     valuePerLevel: 1,
@@ -74,8 +73,6 @@ class Upgrades {
   static const UpgradeDefinition comboWindow = UpgradeDefinition(
     type: UpgradeType.comboWindow,
     id: 'combo_window',
-    title: 'Steady Combo',
-    description: 'More time between pickups before a combo lapses.',
     icon: Icons.local_fire_department_rounded,
     baseValue: GameConfig.comboWindow,
     valuePerLevel: 0.4,
@@ -85,8 +82,6 @@ class Upgrades {
   static const UpgradeDefinition comboBanana = UpgradeDefinition(
     type: UpgradeType.comboBanana,
     id: 'combo_banana_value',
-    title: 'Juicier Bananas',
-    description: 'Coins paid out per combo banana.',
     icon: Icons.monetization_on_rounded,
     baseValue: GameConfig.comboCoinValue,
     valuePerLevel: 2,
